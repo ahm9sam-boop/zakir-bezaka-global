@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ar" dir="rtl" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ذاكر بذكاء - المساعد التعليمي الذكي</title>
+    <meta
+      name="description"
+      content="منصة تعليمية متكاملة للمذاكرة الذكية، تلخيص المواد الدراسية، قراءة ملفات PDF، إنشاء الاختبارات والبطاقات التعليمية، والخرائط الذهنية بالذكاء الاصطناعي."
+    />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:title" content="ذاكر بذكاء - المساعد التعليمي الذكي" />
+    <meta
+      property="og:description"
+      content="منصة تعليمية متكاملة للمذاكرة الذكية، تفريغ المحاضرات، تلخيص المواد، قراءة ملفات PDF، إنشاء الاختبارات، والخرائط الذهنية بـ 10 لغات."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/pwa-512x512.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="ذاكر بذكاء - المساعد التعليمي الذكي" />
+    <meta
+      name="twitter:description"
+      content="منصة تعليمية عالمية للمذاكرة الذكية بالذكاء الاصطناعي مع تفريغ المحاضرات والاختبارات والبطاقات التعليمية."
+    />
+    <meta name="twitter:image" content="/pwa-512x512.png" />
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="ذاكر بذكاء" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/pwa-192x192.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Alexandria:wght@400;500;600;700;800&family=Cairo:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "ذاكر بذكاء - Zakir Smart",
+        "applicationCategory": "EducationalApplication",
+        "operatingSystem": "Web, Android, iOS",
+        "description": "AI-powered study platform with lecture transcription, summarization, PDF reader, quizzes, flashcards, mind maps, and study timer.",
+        "inLanguage": ["ar", "en", "fr", "es", "de", "tr", "pt", "id", "hi", "ru"],
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      }
+    </script>
+    <script>
+      // Prevent flash of wrong theme or direction before React hydrates
+      (function () {
+        try {
+          var rawTheme = localStorage.getItem('zakir_theme');
+          var theme = rawTheme ? JSON.parse(rawTheme) : 'dark';
+          var root = document.documentElement;
+          if (theme === 'light') {
+            root.classList.remove('dark');
+          } else {
+            root.classList.add('dark');
+          }
+          var rawLang = localStorage.getItem('zakir_language');
+          var lang = rawLang ? JSON.parse(rawLang) : (navigator.language || 'en').slice(0, 2);
+          root.lang = lang;
+          root.dir = lang === 'ar' ? 'rtl' : 'ltr';
+        } catch (e) {}
+      })();
+    </script>
+    <script src="/pdf.min.js"></script>
+    <script>
+      (function () {
+        function setupWorker() {
+          if (window.pdfjsLib) {
+            try {
+              window.pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+            } catch (e) {
+              console.warn('PDF.js worker setup:', e);
+            }
+          }
+        }
+        if (!window.pdfjsLib) {
+          var s = document.createElement('script');
+          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+          s.onload = setupWorker;
+          document.head.appendChild(s);
+        } else {
+          setupWorker();
+        }
+      })();
+    </script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function () {
+          navigator.serviceWorker.register('/sw.js').catch(function () {});
+        });
+      }
+    </script>
+  </head>
+  <body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 antialiased selection:bg-teal-500 selection:text-white min-h-screen">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

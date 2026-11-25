@@ -1,0 +1,71 @@
+{
+  "id": "/",
+  "name": "ذاكر بذكاء - Zakir Smart",
+  "short_name": "Zakir Smart",
+  "description": "AI-powered smart study platform for lecture transcription, summarization, PDF reading, quizzes, flashcards, and mind maps.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#020617",
+  "theme_color": "#0f172a",
+  "lang": "ar",
+  "dir": "auto",
+  "categories": ["education", "productivity"],
+  "icons": [
+    {
+      "src": "/pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "AI Assistant",
+      "short_name": "Assistant",
+      "description": "Ask AI tutor and explore study topics",
+      "url": "/?tab=assistant",
+      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Summarizer",
+      "short_name": "Summarize",
+      "description": "Summarize lessons and textbooks",
+      "url": "/?tab=summarizer",
+      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Quizzes",
+      "short_name": "Quizzes",
+      "description": "Generate interactive quizzes",
+      "url": "/?tab=quizzes",
+      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Flashcards",
+      "short_name": "Cards",
+      "description": "Review interactive flashcards",
+      "url": "/?tab=flashcards",
+      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192" }]
+    }
+  ]
+}
