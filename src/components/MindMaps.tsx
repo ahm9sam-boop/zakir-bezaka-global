@@ -1,3 +1,4 @@
+import { FileImport } from './FileImport';
 import React, { useState, useEffect } from 'react';
 import {
   GitFork,
@@ -198,7 +199,7 @@ export const MindMaps: React.FC<MindMapsProps> = ({
             <span>{t.mindmaps.samplesLabel}</span>
           </span>
           <div className="flex flex-wrap gap-2">
-            {t.samples.map((sample) => (
+            {([] as typeof t.samples).map((sample) => (
               <button
                 key={sample.id}
                 type="button"
@@ -214,6 +215,7 @@ export const MindMaps: React.FC<MindMapsProps> = ({
           </div>
         </div>
 
+<FileImport className="mb-2" onText={(x) => setTopicInput((p) => (p ? p + "\n" : "") + x)} />
         <div className="flex flex-col sm:flex-row gap-2">
           <input
             type="text"
