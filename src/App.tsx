@@ -9,6 +9,7 @@ import { LectureTranscription } from './components/LectureTranscription';
 import { MindMaps } from './components/MindMaps';
 import { QuizGenerator } from './components/QuizGenerator';
 import { FlashcardsView } from './components/FlashcardsView';
+import { UpdateNotice } from './components/UpdateNotice';
 import { AdSlot } from './components/AdSlot';
 import { StudyLab } from './components/StudyLab';
 import { StudyPlanner } from './components/StudyPlanner';
@@ -460,6 +461,7 @@ export default function App() {
 
           {currentTab === 'contact' && <ContactUs />}
 
+          <UpdateNotice />
           {currentTab !== 'admin' && <AdSlot className="mx-4 my-6" />}
 
           {currentTab === 'about' && <AboutPrivacyPage onNavigate={setCurrentTab} />}
