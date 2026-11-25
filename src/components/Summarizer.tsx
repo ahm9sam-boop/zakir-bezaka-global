@@ -1,3 +1,4 @@
+import { FileImport } from './FileImport';
 import React, { useState, useEffect } from 'react';
 import {
   FileText,
@@ -157,7 +158,7 @@ export const Summarizer: React.FC<SummarizerProps> = ({
             {t.summarizer.samplesLabel}
           </span>
           <div className="flex flex-wrap gap-2">
-            {t.samples.map((sample) => (
+            {([] as typeof t.samples).map((sample) => (
               <button
                 key={sample.id}
                 type="button"
@@ -171,6 +172,7 @@ export const Summarizer: React.FC<SummarizerProps> = ({
         </div>
 
         {/* Text Input Area */}
+<FileImport className="mb-2" onText={(x) => setInputText((p) => (p ? p + "\n" : "") + x)} />
         <div className="relative">
           <textarea
             value={inputText}
