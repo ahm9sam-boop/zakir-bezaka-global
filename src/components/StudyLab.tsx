@@ -18,7 +18,7 @@ const load = <T,>(k: string, f: T): T => { try { const v = localStorage.getItem(
 export const StudyLab: React.FC = () => {
   const { lang, isRtl } = useLanguage() as any;
   const t = (lang === 'ar' ? S.ar : S.en) as typeof S.ar;
-  const [mode, setMode] = useState<'review' | 'exam' | 'tutor' | 'league'>('review');
+  const [mode, setMode] = useState<'review' | 'exam' | 'tutor'>('review');
   const [deck, setDeck] = useState<Card[]>(() => load(DECK_KEY, []));
   const [stats, setStats] = useState<Stats>(() => {
     const s = load<Stats>(STAT_KEY, { xp: 0, streak: 0, lastDay: '', today: day(), todayCount: 0, best: 0 });
@@ -60,15 +60,6 @@ export const StudyLab: React.FC = () => {
     try { const j = await post('/api/youtube', { url }); setText(x => (x ? x + '\n' : '') + j.text); award(5); } catch (e: any) { setErr(e.message || t.err); } finally { setInfo(''); }
   };
   const importFile = async (f?: File | null) => { if (!f) return; const tx = await f.text(); setText(x => (x ? x + '\n' : '') + tx); };
-  const weekXp = stats.xp - (stats.weekBase ?? stats.xp);
-  const league = useMemo(() => {
-    const names = ['Layla', 'Omar', 'Mei', 'Carlos', 'Aisha', 'Lukas', 'Priya', 'Yusuf', 'Sofia', 'Kenji', 'Nour', 'Ivan'];
-    const wk = Math.floor(Date.now() / 6048e5); const frac = Math.min(1, ((Date.now() / 864e5 + 4) % 7) / 7 + 0.1);
-    const rows = names.map((n, i) => { const seed = Math.abs(Math.sin(wk * 31 + i * 17) * 10000) % 1; return { n, xp: Math.round((40 + seed * 360) * frac) }; });
-    rows.push({ n: t.you, xp: weekXp }); rows.sort((a, b) => b.xp - a.xp); return rows;
-  }, [weekXp, t.you]);
-  const myRank = league.findIndex(r => r.n === t.you) + 1;
-  const tier = myRank <= 3 ? '🥇' : myRank <= 7 ? '🥈' : '🥉';
 
   useEffect(() => { localStorage.setItem(DECK_KEY, JSON.stringify(deck)); }, [deck]);
   useEffect(() => { localStorage.setItem(STAT_KEY, JSON.stringify(stats)); }, [stats]);
@@ -158,7 +149,6 @@ export const StudyLab: React.FC = () => {
         <button className={mode === 'review' ? pri : sec} onClick={() => setMode('review')}>{t.review}</button>
         <button className={mode === 'exam' ? pri : sec} onClick={() => setMode('exam')}>{t.exam}</button>
         <button className={mode === 'tutor' ? pri : sec} onClick={() => setMode('tutor')}>{t.tutor}</button>
-        <button className={mode === 'league' ? pri : sec} onClick={() => setMode('league')}>{t.league}</button>
       </div>
       <div className={card + ' space-y-2'}>
         <textarea value={text} onChange={e => setText(e.target.value)} placeholder={t.paste} rows={4} className="w-full rounded-xl p-3 text-sm bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800" />
@@ -168,7 +158,7 @@ export const StudyLab: React.FC = () => {
           <label className={sec}>📄 .txt<input type="file" accept=".txt,.md,.csv" className="hidden" onChange={e => importFile(e.target.files?.[0])} /></label>
         </div>
         {info && <p className="text-xs text-teal-600">{info}</p>}
-        {mode === 'tutor' || mode === 'league' ? null : mode === 'review' ? (
+        {mode === 'tutor' ? null : mode === 'review' ? (
           <button className={pri} disabled={busy || !text.trim()} onClick={generate}>{busy ? t.loading : t.gen}</button>
         ) : (
           <div className="flex items-center gap-2 flex-wrap">
@@ -178,14 +168,6 @@ export const StudyLab: React.FC = () => {
         )}
         {err && <p className="text-xs text-red-500">{err}</p>}
       </div>
-
-      {mode === 'league' && (
-        <div className={card + ' space-y-1'}>
-          <p className="text-sm font-bold">{tier} {t.week}: #{myRank}</p>
-          <p className="text-[11px] text-slate-500">{t.sim}</p>
-          {league.map((r, i) => <div key={r.n + i} className={`flex justify-between text-xs p-1.5 rounded ${r.n === t.you ? 'bg-teal-500/15 font-black' : ''}`}><span>{i + 1}. {r.n}</span><span>{r.xp} {t.xp}</span></div>)}
-        </div>
-      )}
 
       {mode === 'tutor' && (
         <div className={card + ' space-y-2'}>
