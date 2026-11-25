@@ -1,3 +1,4 @@
+import { FileImport } from './FileImport';
 import React, { useState, useRef, useEffect } from 'react';
 import {
   Send,
@@ -288,7 +289,7 @@ export const AiAssistant: React.FC<AiAssistantProps> = ({
                 <option value="" disabled>
                   {t.assistant.chooseSample}
                 </option>
-                {t.samples.map((m) => (
+                {([] as typeof t.samples).map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.title}
                   </option>
@@ -305,6 +306,7 @@ export const AiAssistant: React.FC<AiAssistantProps> = ({
               )}
             </div>
           </div>
+<FileImport className="mb-2" onText={(x) => setStudyContext((p) => (p ? p + "\n" : "") + x)} />
           <textarea
             value={studyContext}
             onChange={(e) => setStudyContext(e.target.value)}
