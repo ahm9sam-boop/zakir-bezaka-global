@@ -134,6 +134,8 @@ app.get('/api/status', (_req, res) => {
 });
 
 // 2. Chat API
+app.get('/api/ads-config', (_req, res) => res.json({ client: process.env.ADSENSE_CLIENT || '', slot: process.env.ADSENSE_SLOT || '' }));
+
 app.post('/api/youtube', async (req, res) => {
   try {
     const url = String(req.body?.url || '');
