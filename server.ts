@@ -1,6 +1,6 @@
 import express from 'express';
 import { createServer as createViteServer } from 'vite';
-import { GoogleGenAI } from '@google/genai';
+import { getAi } from './ai';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
@@ -44,18 +44,7 @@ function resolveLang(lang?: string) {
 }
 
 function getGeminiClient() {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey || apiKey === 'MY_GEMINI_API_KEY') {
-    return null;
-  }
-  return new GoogleGenAI({
-    apiKey,
-    httpOptions: {
-      headers: {
-        'User-Agent': 'aistudio-build',
-      },
-    },
-  });
+  return getAi();
 }
 
 function extractJson(raw: string): any {
@@ -131,7 +120,7 @@ function getErrorMessage(langCode: string, type: 'no_key' | 'ai_failed' | 'bad_i
 // 1. Status API
 app.get('/api/status', (_req, res) => {
   const apiKey = process.env.GEMINI_API_KEY;
-  const isKeyConfigured = Boolean(apiKey && apiKey !== 'MY_GEMINI_API_KEY');
+  const isKeyConfigured = true;
   res.json({
     status: 'online',
     appName: 'Zakir Smart / ذاكر بذكاء',
@@ -204,7 +193,7 @@ ${studyContext ? `\nStudent's attached study material context:\n"""${String(stud
     });
 
     const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('Chat generation timeout')), 25000)
+      setTimeout(() => reject(new Error('Chat generation timeout')), 110000)
     );
 
     const response: any = await Promise.race([chatPromise, timeoutPromise]);
@@ -225,7 +214,7 @@ ${studyContext ? `\nStudent's attached study material context:\n"""${String(stud
 
     return res.json({
       reply,
-      source: 'Gemini 4 Flash',
+      source: 'AI Tutor',
       isLiveAi: true,
     });
   } catch (err: any) {
@@ -280,7 +269,7 @@ Return ONLY valid JSON matching this schema:
     });
 
     const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('Summarize timeout')), 25000)
+      setTimeout(() => reject(new Error('Summarize timeout')), 110000)
     );
 
     const response: any = await Promise.race([aiPromise, timeoutPromise]);
@@ -297,7 +286,7 @@ Return ONLY valid JSON matching this schema:
       definitions: Array.isArray(parsed.definitions) ? parsed.definitions : [],
       examTips: Array.isArray(parsed.examTips) ? parsed.examTips : [],
       isAiGenerated: true,
-      engine: 'Gemini 4 Flash',
+      engine: 'AI Tutor',
     });
   } catch (err: any) {
     console.error('Gemini Summarize error:', err?.message || err);
@@ -331,7 +320,7 @@ app.post('/api/quiz', async (req, res) => {
     const prompt = `You are an expert academic assessment creator.
 CRITICAL REQUIREMENT: Write ALL questions, options, answers, and explanations strictly in ${langMeta.name}.
 Study topic or text:
-"""${topicOrText.slice(0, 25000)}"""
+"""${topicOrText.slice(0, 110000)}"""
 
 Requirements:
 - Exact number of questions: ${safeCount}
@@ -361,7 +350,7 @@ Return ONLY a valid JSON array:
     });
 
     const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('Quiz timeout')), 25000)
+      setTimeout(() => reject(new Error('Quiz timeout')), 110000)
     );
 
     const response: any = await Promise.race([aiPromise, timeoutPromise]);
@@ -386,7 +375,7 @@ Return ONLY a valid JSON array:
         explanation: q.explanation || '',
       })),
       isAiGenerated: true,
-      engine: 'Gemini 4 Flash',
+      engine: 'AI Tutor',
     });
   } catch (err: any) {
     console.error('Gemini Quiz error:', err?.message || err);
@@ -433,7 +422,7 @@ Return ONLY a valid JSON array:
     });
 
     const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('Flashcards timeout')), 25000)
+      setTimeout(() => reject(new Error('Flashcards timeout')), 110000)
     );
 
     const response: any = await Promise.race([aiPromise, timeoutPromise]);
@@ -454,7 +443,7 @@ Return ONLY a valid JSON array:
         mastered: false,
       })),
       isAiGenerated: true,
-      engine: 'Gemini 4 Flash',
+      engine: 'AI Tutor',
     });
   } catch (err: any) {
     console.error('Gemini Flashcards error:', err?.message || err);
@@ -514,7 +503,7 @@ Return ONLY valid JSON:
     });
 
     const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('MindMap timeout')), 25000)
+      setTimeout(() => reject(new Error('MindMap timeout')), 110000)
     );
 
     const response: any = await Promise.race([aiPromise, timeoutPromise]);
@@ -523,7 +512,7 @@ Return ONLY valid JSON:
     return res.json({
       tree: parsed,
       isAiGenerated: true,
-      engine: 'Gemini 4 Flash',
+      engine: 'AI Tutor',
     });
   } catch (err: any) {
     console.error('Gemini MindMap error:', err?.message || err);
@@ -587,7 +576,7 @@ Respond ONLY with valid JSON:
     let fullText = '';
     let summaryText = '';
     let keyPoints: string[] = [];
-    let usedEngine = 'Gemini 3.5 Transcribe';
+    let usedEngine = 'AI Transcribe';
 
     try {
       const transcribePromise = ai.models.generateContent({
@@ -601,7 +590,7 @@ Respond ONLY with valid JSON:
       });
 
       const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Transcription timeout')), 40000)
+        setTimeout(() => reject(new Error('Transcription timeout')), 110000)
       );
 
       const response: any = await Promise.race([transcribePromise, timeoutPromise]);
@@ -616,7 +605,7 @@ Respond ONLY with valid JSON:
       }
     } catch (err1: any) {
       console.warn('Gemini 3.5 Transcribe fallback to gemini-4-hydrogen:', err1?.message || err1);
-      usedEngine = 'Gemini 4 Flash';
+      usedEngine = 'AI Tutor';
       const flashPromise = ai.models.generateContent({
         model: TEXT_MODEL,
         contents: {
