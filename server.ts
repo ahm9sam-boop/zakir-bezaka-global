@@ -1,6 +1,7 @@
 import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import { getAi } from './ai';
+import { jobs, transcribeJob, Job } from './src/server/transcribe';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
@@ -541,6 +542,35 @@ Return ONLY valid JSON:
 });
 
 // 7. Audio / Lecture Transcription API
+app.post('/api/transcribe-start', async (req, res) => {
+  const { audioBase64, mimeType = '', title = 'Lecture Recording', language, fileName = '' } = req.body || {};
+  const { code: langCode, meta: langMeta } = resolveLang(language);
+  const key = process.env.GROQ_API_KEY;
+  if (!key) return res.status(501).json({ error: 'no-groq' });
+  if (!audioBase64) return res.status(400).json({ error: getErrorMessage(langCode, 'bad_input') });
+  const ext = (String(fileName).split('.').pop() || String(mimeType).split('/').pop() || 'bin').replace(/[^a-z0-9]/gi, '').slice(0, 5);
+  const job: Job = { id: 'j' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7), status: 'processing', progress: 1, stage: 'upload', created: Date.now() };
+  jobs.set(job.id, job);
+  const buf = Buffer.from(String(audioBase64), 'base64');
+  const hint = req.body?.audioLang && req.body.audioLang !== 'auto' ? String(req.body.audioLang) : undefined;
+  transcribeJob(job, buf, ext, {
+    key, lang: hint, title,
+    summarize: async (text: string) => {
+      const ai = getGeminiClient(); if (!ai) throw new Error('no ai');
+      const body = text.length > 30000 ? text.slice(0, 20000) + '\n...\n' + text.slice(-9000) : text;
+      const r: any = await ai.models.generateContent({ model: TEXT_MODEL, contents: `Summarize this lecture transcript strictly in ${langMeta.name}. Respond ONLY with JSON {"summary":"concise academic summary","keyPoints":["5-8 key exam points"]}.\n"""${body}"""`, config: { responseMimeType: 'application/json' } });
+      const j = extractJson(r?.text || '{}'); return { summary: j.summary || '', keyPoints: Array.isArray(j.keyPoints) ? j.keyPoints : [] };
+    },
+  });
+  return res.json({ jobId: job.id });
+});
+
+app.get('/api/transcribe-status/:id', (req, res) => {
+  const j = jobs.get(req.params.id);
+  if (!j) return res.status(404).json({ error: 'Job not found (server restarted?). Try again.' });
+  return res.json({ status: j.status, progress: j.progress, stage: j.stage, result: j.result, error: j.error });
+});
+
 app.post('/api/transcribe', async (req, res) => {
   const { audioBase64, mimeType = 'audio/mp3', title = 'Lecture Recording', studentPhone, language } = req.body || {};
   const { code: langCode, meta: langMeta } = resolveLang(language);
