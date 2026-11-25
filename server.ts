@@ -133,6 +133,26 @@ app.get('/api/status', (_req, res) => {
 });
 
 // 2. Chat API
+app.post('/api/youtube', async (req, res) => {
+  try {
+    const url = String(req.body?.url || '');
+    const m = url.match(/(?:v=|youtu\.be\/|shorts\/|embed\/)([A-Za-z0-9_-]{11})/);
+    if (!m) return res.status(400).json({ error: 'Invalid YouTube link' });
+    const page = await (await fetch(`https://www.youtube.com/watch?v=${m[1]}&hl=en`, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36', 'Accept-Language': 'en-US,en;q=0.9', Cookie: 'CONSENT=YES+1' } })).text();
+    const mm = page.match(/"captionTracks":(\[.*?\])/);
+    if (!mm) return res.status(404).json({ error: 'No captions available for this video. Paste the text instead.' });
+    const tracks = JSON.parse(mm[1]);
+    const want = String(req.body?.language || 'en');
+    const tr = tracks.find((t: any) => t.languageCode?.startsWith(want)) || tracks.find((t: any) => t.languageCode?.startsWith('en')) || tracks[0];
+    const j: any = await (await fetch(tr.baseUrl + '&fmt=json3')).json();
+    const text = (j.events || []).map((e: any) => (e.segs || []).map((s: any) => s.utf8).join('')).join(' ').replace(/\s+/g, ' ').trim();
+    if (!text) return res.status(404).json({ error: 'Empty transcript' });
+    return res.json({ text: text.slice(0, 40000), lang: tr.languageCode });
+  } catch (e: any) {
+    return res.status(502).json({ error: 'Could not fetch captions. Paste the text instead.' });
+  }
+});
+
 app.post('/api/chat', async (req, res) => {
   const { messages, studyContext, language, studentPhone } = req.body || {};
   const { code: langCode, meta: langMeta } = resolveLang(language);
