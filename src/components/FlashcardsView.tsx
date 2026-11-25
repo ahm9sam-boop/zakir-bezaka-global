@@ -1,3 +1,4 @@
+import { FileImport } from './FileImport';
 import React, { useState, useEffect } from 'react';
 import {
   Layers,
@@ -207,7 +208,7 @@ export const FlashcardsView: React.FC<FlashcardsViewProps> = ({
             <span>{t.flashcards.samplesLabel}</span>
           </span>
           <div className="flex flex-wrap gap-2">
-            {t.samples.map((sample) => (
+            {([] as typeof t.samples).map((sample) => (
               <button
                 key={sample.id}
                 type="button"
@@ -220,6 +221,7 @@ export const FlashcardsView: React.FC<FlashcardsViewProps> = ({
           </div>
         </div>
 
+<FileImport className="mb-2" onText={(x) => setTopicInput((p) => (p ? p + "\n" : "") + x)} />
         <div className="flex flex-col sm:flex-row gap-2">
           <input
             type="text"
