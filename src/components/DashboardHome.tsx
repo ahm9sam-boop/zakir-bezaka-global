@@ -328,8 +328,8 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
         </div>
       </div>
 
-      {/* Instant Study Samples Starter */}
-      <div className="rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 p-5 sm:p-6 space-y-4 shadow-sm">
+      {/* samples removed: no demo content */}
+      <div className="hidden">
         <div>
           <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <BookOpen className="w-5 h-5 text-teal-600 dark:text-teal-400" />
@@ -341,7 +341,7 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {t.samples.map((sample) => (
+          {([] as typeof t.samples).map((sample) => (
             <div
               key={sample.id}
               className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-teal-500/40 transition flex flex-col justify-between"
