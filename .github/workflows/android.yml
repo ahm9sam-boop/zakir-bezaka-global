@@ -20,16 +20,18 @@ jobs:
       - name: Install
         run: |
           npm install --legacy-peer-deps
-          npm install --no-save --legacy-peer-deps @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7 @capacitor/assets
+          npm install --no-save --legacy-peer-deps @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7
       - name: Build web
         run: npm run build
       - name: Add Android
         run: |
           npx cap add android
-          mkdir -p assets
-          cp public/pwa-512x512.png assets/icon-only.png
-          cp public/pwa-512x512.png assets/icon-foreground.png
-          npx capacitor-assets generate --android --iconBackgroundColor '#0f172a' --iconBackgroundColorDark '#0f172a' || true
+          rm -rf android/app/src/main/res/mipmap-anydpi-v26
+          for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+            cp public/pwa-192x192.png android/app/src/main/res/mipmap-$d/ic_launcher.png
+            cp public/pwa-192x192.png android/app/src/main/res/mipmap-$d/ic_launcher_round.png
+            rm -f android/app/src/main/res/mipmap-$d/ic_launcher_foreground.png
+          done
           VER="${{ github.event.inputs.version }}"
           CODE=$(echo "$VER" | awk -F. '{print $1*10000+$2*100+$3}')
           sed -i "s/versionCode 1/versionCode $CODE/; s/versionName \"1.0\"/versionName \"$VER\"/" android/app/build.gradle
