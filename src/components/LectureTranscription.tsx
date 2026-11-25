@@ -59,6 +59,8 @@ export const LectureTranscription: React.FC<LectureTranscriptionProps> = ({
   const recognitionRef = useRef<any>(null);
 
   const [isLoading, setIsLoading] = useState(false);
+  const [jobPct, setJobPct] = useState(0);
+  const [audioLang, setAudioLang] = useState('auto');
   const [loadingStep, setLoadingStep] = useState(1);
   const [transcriptResult, setTranscriptResult] = useState<TranscriptResultState | null>(() =>
     safeStorageGet<TranscriptResultState | null>('zakir_saved_transcript', null)
@@ -272,47 +274,40 @@ export const LectureTranscription: React.FC<LectureTranscriptionProps> = ({
     setErrorMessage(null);
 
     try {
-      const response = await fetch('/api/transcribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          audioBase64,
-          mimeType: audioMimeType || 'audio/mp3',
-          title: audioFileName || t.transcription.title,
-          studentPhone: studentPhone || undefined,
-          language: lang,
-        }),
+      const post = async (u: string, body?: unknown) => {
+        const r = await fetch(u, body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : undefined);
+        const j = await r.json().catch(() => ({}));
+        return { ok: r.ok, status: r.status, j };
+      };
+      const start = await post('/api/transcribe-start', {
+        audioBase64,
+        mimeType: audioMimeType || 'audio/mp3',
+        fileName: audioFileName,
+        title: audioFileName || t.transcription.title,
+        language: lang,
+        audioLang,
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || t.assistant.errorFallback);
+      if (start.status === 501) {
+        const old = await post('/api/transcribe', { audioBase64, mimeType: audioMimeType || 'audio/mp3', title: audioFileName || t.transcription.title, studentPhone: studentPhone || undefined, language: lang });
+        if (!old.ok) throw new Error(old.j.error || t.assistant.errorFallback);
+        setTranscriptResult(old.j);
+        return;
       }
-
-      setTranscriptResult(data);
+      if (!start.ok) throw new Error(start.j.error || t.assistant.errorFallback);
+      for (;;) {
+        await new Promise((r) => setTimeout(r, 3000));
+        const st = await post('/api/transcribe-status/' + start.j.jobId);
+        if (!st.ok) throw new Error(st.j.error || t.assistant.errorFallback);
+        setJobPct(st.j.progress || 0);
+        setLoadingStep(st.j.stage === 'summarize' ? 3 : st.j.stage === 'transcribe' ? 2 : 1);
+        if (st.j.status === 'error') throw new Error(st.j.error || t.assistant.errorFallback);
+        if (st.j.status === 'done') { setTranscriptResult(st.j.result); break; }
+      }
     } catch (err: unknown) {
       setErrorMessage(err instanceof Error ? err.message : t.assistant.errorFallback);
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleDemoLecture = () => {
-    setAudioUrl(null);
-    setAudioBase64(null);
-    setAudioFileName(t.transcription.demoLecture.fileName);
-    setIsLoading(true);
-    setTimeout(() => {
-      setTranscriptResult({
-        title: t.transcription.demoLecture.title,
-        transcription: t.transcription.demoLecture.transcription,
-        summary: t.transcription.demoLecture.summary,
-        keyPoints: t.transcription.demoLecture.keyPoints,
-        engine: t.transcription.engineBadge,
-      });
-      setIsLoading(false);
-    }, 500);
   };
 
   const handleCopy = () => {
@@ -430,7 +425,7 @@ export const LectureTranscription: React.FC<LectureTranscriptionProps> = ({
               type="file"
               ref={fileInputRef}
               onChange={handleFileUpload}
-              accept="audio/*,.mp3,.m4a,.wav,.webm,.ogg,.aac"
+              accept="audio/*,video/*,.mp3,.m4a,.wav,.webm,.ogg,.aac,.mp4,.mkv,.mov,.opus"
               className="hidden"
             />
 
@@ -443,14 +438,6 @@ export const LectureTranscription: React.FC<LectureTranscriptionProps> = ({
               <span>{t.transcription.chooseFileBtn}</span>
             </button>
 
-            <button
-              type="button"
-              onClick={handleDemoLecture}
-              className="w-full py-2 px-3 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 text-[11px] font-bold border border-amber-500/25 flex items-center justify-center gap-1.5 transition cursor-pointer"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>{t.transcription.demoBtn}</span>
-            </button>
           </div>
 
           {/* Option 3: Live Dictation */}
@@ -527,6 +514,14 @@ export const LectureTranscription: React.FC<LectureTranscriptionProps> = ({
               <span>{t.transcription.aiHint}</span>
             </div>
 
+            <div className="flex items-center gap-2 text-xs">
+              <select value={audioLang} onChange={(e) => setAudioLang(e.target.value)} className="rounded-lg p-2 bg-slate-100 dark:bg-slate-800">
+                <option value="auto">Auto</option>
+                <option value="ar">العربية</option>
+                <option value="en">English</option>
+              </select>
+              {isLoading && <span className="font-bold">{jobPct}%</span>}
+            </div>
             <button
               type="button"
               onClick={handleTranscribe}
