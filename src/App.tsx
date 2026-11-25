@@ -9,6 +9,7 @@ import { LectureTranscription } from './components/LectureTranscription';
 import { MindMaps } from './components/MindMaps';
 import { QuizGenerator } from './components/QuizGenerator';
 import { FlashcardsView } from './components/FlashcardsView';
+import { StudyLab } from './components/StudyLab';
 import { StudyPlanner } from './components/StudyPlanner';
 import { SavedMaterials } from './components/SavedMaterials';
 import { ProgressDashboard } from './components/ProgressDashboard';
@@ -32,6 +33,7 @@ const VALID_TABS: DashboardTab[] = [
   'mindmaps',
   'quizzes',
   'flashcards',
+  'studylab',
   'planner',
   'saved',
   'progress',
@@ -165,7 +167,7 @@ export default function App() {
   useEffect(() => {
     if (!currentStudent?.phone || currentTab === 'admin') return;
 
-    const label = t.tabs[currentTab]?.label || currentTab;
+    const label = (t.tabs as any)[currentTab]?.label || currentTab;
     fetch('/api/student/activity-log', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -174,7 +176,7 @@ export default function App() {
         type: 'navigation',
         tool: currentTab,
         title: label,
-        details: t.tabs[currentTab]?.desc || label,
+        details: (t.tabs as any)[currentTab]?.desc || label,
       }),
     }).catch(() => {});
   }, [currentTab, currentStudent?.phone, t.tabs]);
@@ -440,6 +442,8 @@ export default function App() {
               studentPhone={currentStudent?.phone}
             />
           )}
+
+          {currentTab === 'studylab' && <StudyLab />}
 
           {currentTab === 'planner' && (
             <StudyPlanner
