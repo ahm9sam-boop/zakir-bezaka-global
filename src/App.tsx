@@ -80,31 +80,23 @@ export default function App() {
   const [customMaterials, setCustomMaterials] = useState<SavedMaterial[] | null>(() =>
     safeStorageGet<SavedMaterial[] | null>('zakir_saved_materials', null)
   );
-  const savedMaterials = customMaterials ?? t.saved.initialMaterials;
+  const savedMaterials = customMaterials ?? ([] as SavedMaterial[]);
 
   const [customTasks, setCustomTasks] = useState<StudyTask[] | null>(() =>
     safeStorageGet<StudyTask[] | null>('zakir_study_tasks', null)
   );
-  const tasks = customTasks ?? t.planner.initialTasks;
+  const tasks = customTasks ?? ([] as StudyTask[]);
 
   const [progress, setProgress] = useState<UserProgress>(() =>
     safeStorageGet<UserProgress>('zakir_user_progress', {
-      streakDays: 5,
-      totalStudyMinutes: 145,
-      quizzesTaken: 4,
-      averageQuizScore: 85,
-      cardsMastered: 4,
-      summariesCreated: 3,
-      tasksCompleted: 2,
-      dailyMinutes: [
-        { day: 'Day 1', minutes: 35 },
-        { day: 'Day 2', minutes: 45 },
-        { day: 'Day 3', minutes: 20 },
-        { day: 'Day 4', minutes: 50 },
-        { day: 'Day 5', minutes: 30 },
-        { day: 'Day 6', minutes: 60 },
-        { day: 'Day 7', minutes: 25 },
-      ],
+      streakDays: 0,
+      totalStudyMinutes: 0,
+      quizzesTaken: 0,
+      averageQuizScore: 0,
+      cardsMastered: 0,
+      summariesCreated: 0,
+      tasksCompleted: 0,
+      dailyMinutes: ['D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7'].map((day) => ({ day, minutes: 0 })),
     })
   );
 
@@ -247,11 +239,11 @@ export default function App() {
       id: `mat-${Date.now()}`,
       createdAt: new Date().toISOString().slice(0, 10),
     };
-    setCustomMaterials((prev) => [newMaterial, ...(prev ?? t.saved.initialMaterials)]);
+    setCustomMaterials((prev) => [newMaterial, ...(prev ?? ([] as SavedMaterial[]))]);
   };
 
   const handleDeleteMaterial = (id: string) => {
-    setCustomMaterials((prev) => (prev ?? t.saved.initialMaterials).filter((m) => m.id !== id));
+    setCustomMaterials((prev) => (prev ?? ([] as SavedMaterial[])).filter((m) => m.id !== id));
   };
 
   const handleUpdateTasks = (nextTasks: StudyTask[]) => {
