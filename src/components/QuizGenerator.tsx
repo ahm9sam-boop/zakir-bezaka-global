@@ -1,3 +1,4 @@
+import { FileImport } from './FileImport';
 import React, { useState, useEffect } from 'react';
 import confetti from 'canvas-confetti';
 import {
@@ -191,7 +192,7 @@ export const QuizGenerator: React.FC<QuizGeneratorProps> = ({
             <span>{t.quizzes.samplesLabel}</span>
           </span>
           <div className="flex flex-wrap gap-2">
-            {t.samples.map((sample) => (
+            {([] as typeof t.samples).map((sample) => (
               <button
                 key={sample.id}
                 type="button"
@@ -204,6 +205,7 @@ export const QuizGenerator: React.FC<QuizGeneratorProps> = ({
           </div>
         </div>
 
+<FileImport className="mb-2" onText={(x) => setTopicInput((p) => (p ? p + "\n" : "") + x)} />
         <textarea
           value={topicInput}
           onChange={(e) => setTopicInput(e.target.value)}
