@@ -21,6 +21,7 @@ export type DashboardTab =
   | 'mindmaps'
   | 'quizzes'
   | 'flashcards'
+  | 'studylab'
   | 'planner'
   | 'saved'
   | 'progress'
