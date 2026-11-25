@@ -3,11 +3,11 @@ import { useLanguage } from '../contexts/LanguageContext';
 
 type Card = { id: string; front: string; back: string; category?: string; ease: number; interval: number; reps: number; due: number };
 type Q = { id: string; question: string; options: string[]; correctAnswer: string; explanation: string };
-type Stats = { xp: number; streak: number; lastDay: string; today: string; todayCount: number; best: number };
+type Stats = { weekBase?: number; weekId?: string; xp: number; streak: number; lastDay: string; today: string; todayCount: number; best: number };
 
 const S = {
-  ar: { title: 'المعمل الذكي', sub: 'مراجعة متباعدة، امتحان تجريبي، نقاط وسلاسل، قراءة صوتية، تصدير Anki', review: 'مراجعة ذكية', exam: 'امتحان', deck: 'المجموعة', due: 'مستحق اليوم', total: 'الكل', paste: 'ألصق ملخصك أو موضوعك هنا', gen: 'ولّد كروت بالذكاء الاصطناعي', loading: 'جاري التوليد... (ممكن ياخد لحد دقيقة)', show: 'اظهر الإجابة', again: 'نسيت', hard: 'صعب', good: 'كويس', easy: 'سهل', done: 'خلصت مراجعة النهاردة', empty: 'مفيش كروت لسه. ولّد كروت من نص.', front: 'السؤال', back: 'الإجابة', add: 'إضافة', exportAnki: 'تصدير Anki', exportCsv: 'تصدير CSV', clear: 'مسح المجموعة', start: 'ابدأ الامتحان', submit: 'سلّم', score: 'درجتك', weak: 'راجع الأسئلة دي', min: 'دقيقة', time: 'الوقت', xp: 'نقطة', streak: 'يوم متتالي', goal: 'هدف اليوم', listen: 'اسمع', err: 'حصل خطأ، جرّب تاني', level: 'مستوى', q: 'عدد الأسئلة' },
-  en: { title: 'Study Lab', sub: 'Spaced repetition, mock exams, XP & streaks, read-aloud, Anki export', review: 'Smart review', exam: 'Exam', deck: 'Deck', due: 'Due today', total: 'Total', paste: 'Paste your notes or a topic here', gen: 'Generate cards with AI', loading: 'Generating... (can take up to a minute)', show: 'Show answer', again: 'Again', hard: 'Hard', good: 'Good', easy: 'Easy', done: 'All done for today', empty: 'No cards yet. Generate some from text.', front: 'Question', back: 'Answer', add: 'Add', exportAnki: 'Export Anki', exportCsv: 'Export CSV', clear: 'Clear deck', start: 'Start exam', submit: 'Submit', score: 'Your score', weak: 'Review these', min: 'min', time: 'Time', xp: 'XP', streak: 'day streak', goal: 'Daily goal', listen: 'Listen', err: 'Something went wrong, try again', level: 'Level', q: 'Questions' },
+  ar: { title: 'المعمل الذكي', sub: 'مراجعة متباعدة، امتحان تجريبي، نقاط وسلاسل، قراءة صوتية، تصدير Anki', review: 'مراجعة ذكية', exam: 'امتحان', deck: 'المجموعة', due: 'مستحق اليوم', total: 'الكل', paste: 'ألصق ملخصك أو موضوعك هنا', gen: 'ولّد كروت بالذكاء الاصطناعي', loading: 'جاري التوليد... (ممكن ياخد لحد دقيقة)', show: 'اظهر الإجابة', again: 'نسيت', hard: 'صعب', good: 'كويس', easy: 'سهل', done: 'خلصت مراجعة النهاردة', empty: 'مفيش كروت لسه. ولّد كروت من نص.', front: 'السؤال', back: 'الإجابة', add: 'إضافة', exportAnki: 'تصدير Anki', exportCsv: 'تصدير CSV', clear: 'مسح المجموعة', start: 'ابدأ الامتحان', submit: 'سلّم', score: 'درجتك', weak: 'راجع الأسئلة دي', min: 'دقيقة', time: 'الوقت', xp: 'نقطة', streak: 'يوم متتالي', goal: 'هدف اليوم', listen: 'اسمع', err: 'حصل خطأ، جرّب تاني', level: 'مستوى', q: 'عدد الأسئلة', tutor: 'المدرّس', league: 'الدوري', img: 'صورة', yt: 'يوتيوب', ytAsk: 'الصق لينك فيديو يوتيوب (لازم يكون فيه ترجمة)', reading: 'جاري قراءة الصورة...', ytLoad: 'جاري جلب النص...', feynman: 'فاينمان: أنا أشرح وإنت صحّحلي', eli12: 'اشرحلي كأني 12 سنة', normal: 'شرح عادي', send: 'ابعت', ask: 'اسأل أو اشرح...', needText: 'ألصق نص المادة فوق الأول', week: 'ترتيبك الأسبوع ده', rank: 'المركز', sim: 'منافسين افتراضيين بيتجددوا كل أسبوع', you: 'إنت' },
+  en: { title: 'Study Lab', sub: 'Spaced repetition, mock exams, XP & streaks, read-aloud, Anki export', review: 'Smart review', exam: 'Exam', deck: 'Deck', due: 'Due today', total: 'Total', paste: 'Paste your notes or a topic here', gen: 'Generate cards with AI', loading: 'Generating... (can take up to a minute)', show: 'Show answer', again: 'Again', hard: 'Hard', good: 'Good', easy: 'Easy', done: 'All done for today', empty: 'No cards yet. Generate some from text.', front: 'Question', back: 'Answer', add: 'Add', exportAnki: 'Export Anki', exportCsv: 'Export CSV', clear: 'Clear deck', start: 'Start exam', submit: 'Submit', score: 'Your score', weak: 'Review these', min: 'min', time: 'Time', xp: 'XP', streak: 'day streak', goal: 'Daily goal', listen: 'Listen', err: 'Something went wrong, try again', level: 'Level', q: 'Questions', tutor: 'Tutor', league: 'League', img: 'Image', yt: 'YouTube', ytAsk: 'Paste a YouTube link (needs captions)', reading: 'Reading image...', ytLoad: 'Fetching transcript...', feynman: 'Feynman: I explain, you correct me', eli12: 'Explain like I am 12', normal: 'Normal', send: 'Send', ask: 'Ask or explain...', needText: 'Paste your study text above first', week: 'Your rank this week', rank: 'Rank', sim: 'Simulated rivals, refreshed weekly', you: 'You' },
 } as const;
 
 const DECK_KEY = 'zk_lab_deck_v1';
@@ -18,11 +18,13 @@ const load = <T,>(k: string, f: T): T => { try { const v = localStorage.getItem(
 export const StudyLab: React.FC = () => {
   const { lang, isRtl } = useLanguage() as any;
   const t = (lang === 'ar' ? S.ar : S.en) as typeof S.ar;
-  const [mode, setMode] = useState<'review' | 'exam'>('review');
+  const [mode, setMode] = useState<'review' | 'exam' | 'tutor' | 'league'>('review');
   const [deck, setDeck] = useState<Card[]>(() => load(DECK_KEY, []));
   const [stats, setStats] = useState<Stats>(() => {
     const s = load<Stats>(STAT_KEY, { xp: 0, streak: 0, lastDay: '', today: day(), todayCount: 0, best: 0 });
-    return s.today === day() ? s : { ...s, today: day(), todayCount: 0 };
+    const wk = String(Math.floor(Date.now() / 6048e5));
+    const s2 = s.weekId === wk ? s : { ...s, weekId: wk, weekBase: s.xp };
+    return s2.today === day() ? s2 : { ...s2, today: day(), todayCount: 0 };
   });
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
@@ -32,6 +34,41 @@ export const StudyLab: React.FC = () => {
   const [qs, setQs] = useState<Q[]>([]); const [ans, setAns] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false); const [left, setLeft] = useState(0); const [qn, setQn] = useState(8);
   const timer = useRef<any>(null);
+  const [chat, setChat] = useState<{ role: 'u' | 'a'; text: string }[]>([]);
+  const [msg, setMsg] = useState(''); const [style, setStyle] = useState<'normal' | 'eli12' | 'feynman'>('feynman');
+  const [info, setInfo] = useState('');
+  const sendMsg = async () => {
+    if (!msg.trim()) return; if (!text.trim()) { setErr(t.needText); return; }
+    const pre = style === 'feynman' ? 'Feynman technique: the student is explaining the topic to you as if teaching a beginner. Find gaps or mistakes, praise what is right, then ask one probing follow-up question. Student says: ' : style === 'eli12' ? 'Explain simply like I am 12 years old, with a short everyday example. Question: ' : '';
+    const next = [...chat, { role: 'u' as const, text: msg }]; setChat(next); setMsg(''); setBusy(true); setErr('');
+    try {
+      const msgs = next.map((m, i) => ({ id: String(i), sender: m.role === 'u' ? 'user' : 'assistant', content: i === next.length - 1 ? pre + m.text : m.text, timestamp: '' }));
+      const j = await post('/api/chat', { messages: msgs, studyContext: text });
+      setChat(c => [...c, { role: 'a', text: j.reply }]); award(4);
+    } catch (e: any) { setErr(e.message || t.err); } finally { setBusy(false); }
+  };
+  const importImage = async (f?: File | null) => {
+    if (!f) return; setInfo(t.reading); setErr('');
+    try {
+      if (!(window as any).Tesseract) await new Promise<void>((res, rej) => { const sc = document.createElement('script'); sc.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'; sc.onload = () => res(); sc.onerror = () => rej(new Error('ocr')); document.head.appendChild(sc); });
+      const r = await (window as any).Tesseract.recognize(f, 'ara+eng');
+      setText(x => (x ? x + '\n' : '') + r.data.text); award(5);
+    } catch { setErr(t.err); } finally { setInfo(''); }
+  };
+  const importYt = async () => {
+    const url = prompt(t.ytAsk); if (!url) return; setInfo(t.ytLoad); setErr('');
+    try { const j = await post('/api/youtube', { url }); setText(x => (x ? x + '\n' : '') + j.text); award(5); } catch (e: any) { setErr(e.message || t.err); } finally { setInfo(''); }
+  };
+  const importFile = async (f?: File | null) => { if (!f) return; const tx = await f.text(); setText(x => (x ? x + '\n' : '') + tx); };
+  const weekXp = stats.xp - (stats.weekBase ?? stats.xp);
+  const league = useMemo(() => {
+    const names = ['Layla', 'Omar', 'Mei', 'Carlos', 'Aisha', 'Lukas', 'Priya', 'Yusuf', 'Sofia', 'Kenji', 'Nour', 'Ivan'];
+    const wk = Math.floor(Date.now() / 6048e5); const frac = Math.min(1, ((Date.now() / 864e5 + 4) % 7) / 7 + 0.1);
+    const rows = names.map((n, i) => { const seed = Math.abs(Math.sin(wk * 31 + i * 17) * 10000) % 1; return { n, xp: Math.round((40 + seed * 360) * frac) }; });
+    rows.push({ n: t.you, xp: weekXp }); rows.sort((a, b) => b.xp - a.xp); return rows;
+  }, [weekXp, t.you]);
+  const myRank = league.findIndex(r => r.n === t.you) + 1;
+  const tier = myRank <= 3 ? '🥇' : myRank <= 7 ? '🥈' : '🥉';
 
   useEffect(() => { localStorage.setItem(DECK_KEY, JSON.stringify(deck)); }, [deck]);
   useEffect(() => { localStorage.setItem(STAT_KEY, JSON.stringify(stats)); }, [stats]);
@@ -117,13 +154,21 @@ export const StudyLab: React.FC = () => {
         <div className={card}><div className="text-lg font-black">🔥 {stats.streak}</div><div className="text-[11px] text-slate-500">{t.streak}</div></div>
         <div className={card}><div className="text-lg font-black">🎯 {stats.todayCount}/20</div><div className="h-1.5 mt-1 rounded bg-slate-200 dark:bg-slate-800"><div className="h-1.5 rounded bg-teal-500" style={{ width: goal + '%' }} /></div><div className="text-[11px] text-slate-500">{t.goal}</div></div>
       </div>
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         <button className={mode === 'review' ? pri : sec} onClick={() => setMode('review')}>{t.review}</button>
         <button className={mode === 'exam' ? pri : sec} onClick={() => setMode('exam')}>{t.exam}</button>
+        <button className={mode === 'tutor' ? pri : sec} onClick={() => setMode('tutor')}>{t.tutor}</button>
+        <button className={mode === 'league' ? pri : sec} onClick={() => setMode('league')}>{t.league}</button>
       </div>
       <div className={card + ' space-y-2'}>
         <textarea value={text} onChange={e => setText(e.target.value)} placeholder={t.paste} rows={4} className="w-full rounded-xl p-3 text-sm bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800" />
-        {mode === 'review' ? (
+        <div className="flex gap-2 flex-wrap">
+          <label className={sec}>📷 {t.img}<input type="file" accept="image/*" className="hidden" onChange={e => importImage(e.target.files?.[0])} /></label>
+          <button className={sec} onClick={importYt}>▶ {t.yt}</button>
+          <label className={sec}>📄 .txt<input type="file" accept=".txt,.md,.csv" className="hidden" onChange={e => importFile(e.target.files?.[0])} /></label>
+        </div>
+        {info && <p className="text-xs text-teal-600">{info}</p>}
+        {mode === 'tutor' || mode === 'league' ? null : mode === 'review' ? (
           <button className={pri} disabled={busy || !text.trim()} onClick={generate}>{busy ? t.loading : t.gen}</button>
         ) : (
           <div className="flex items-center gap-2 flex-wrap">
@@ -133,6 +178,27 @@ export const StudyLab: React.FC = () => {
         )}
         {err && <p className="text-xs text-red-500">{err}</p>}
       </div>
+
+      {mode === 'league' && (
+        <div className={card + ' space-y-1'}>
+          <p className="text-sm font-bold">{tier} {t.week}: #{myRank}</p>
+          <p className="text-[11px] text-slate-500">{t.sim}</p>
+          {league.map((r, i) => <div key={r.n + i} className={`flex justify-between text-xs p-1.5 rounded ${r.n === t.you ? 'bg-teal-500/15 font-black' : ''}`}><span>{i + 1}. {r.n}</span><span>{r.xp} {t.xp}</span></div>)}
+        </div>
+      )}
+
+      {mode === 'tutor' && (
+        <div className={card + ' space-y-2'}>
+          <div className="flex gap-2 flex-wrap">
+            {(['feynman', 'eli12', 'normal'] as const).map(k => <button key={k} className={style === k ? pri : sec} onClick={() => setStyle(k)}>{k === 'feynman' ? t.feynman : k === 'eli12' ? t.eli12 : t.normal}</button>)}
+          </div>
+          <div className="space-y-2 max-h-96 overflow-y-auto">
+            {chat.map((m, i) => <div key={i} className={`p-2 rounded-xl text-sm whitespace-pre-wrap ${m.role === 'u' ? 'bg-teal-500/10' : 'bg-slate-100 dark:bg-slate-800'}`}>{m.text}{m.role === 'a' && <button className="ms-2" onClick={() => speak(m.text)}>🔊</button>}</div>)}
+          </div>
+          <div className="flex gap-2"><input value={msg} onChange={e => setMsg(e.target.value)} onKeyDown={e => e.key === 'Enter' && sendMsg()} placeholder={t.ask} className="flex-1 rounded-xl p-2 text-sm bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800" /><button className={pri} disabled={busy} onClick={sendMsg}>{busy ? '...' : t.send}</button></div>
+          {err && <p className="text-xs text-red-500">{err}</p>}
+        </div>
+      )}
 
       {mode === 'review' && (
         <>
