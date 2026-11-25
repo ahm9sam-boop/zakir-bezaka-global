@@ -16,6 +16,7 @@ import {
   MessageCircle,
   Share2,
   Info,
+  FlaskConical,
 } from 'lucide-react';
 import { DashboardTab, Student } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -45,7 +46,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenAuthModal,
   onLogout,
 }) => {
-  const { t, isRtl } = useLanguage();
+  const { t, isRtl, lang } = useLanguage();
 
   const navItems = [
     ...(isAdmin
@@ -116,6 +117,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
       description: t.tabs.flashcards.desc,
       icon: Layers,
       badge: null,
+    },
+    {
+      id: 'studylab' as DashboardTab,
+      label: lang === 'ar' ? 'المعمل الذكي' : 'Study Lab',
+      description: lang === 'ar' ? 'مراجعة متباعدة وامتحان ونقاط' : 'Spaced repetition, exams, XP',
+      icon: FlaskConical,
+      badge: 'NEW',
     },
     {
       id: 'planner' as DashboardTab,
