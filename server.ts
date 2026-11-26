@@ -126,8 +126,8 @@ app.get('/api/status', (_req, res) => {
     status: 'online',
     appName: 'Zakir Smart / ذاكر بذكاء',
     hasGeminiKey: isKeyConfigured,
-    model: isKeyConfigured ? TEXT_MODEL : 'unavailable',
-    transcribeModel: isKeyConfigured ? TRANSCRIBE_MODEL : 'unavailable',
+    model: isKeyConfigured ? 'ai' : 'unavailable',
+    transcribeModel: isKeyConfigured ? 'ai' : 'unavailable',
     version: '2.0.0',
     supportedLanguages: Object.keys(SUPPORTED_LANGUAGES),
   });
