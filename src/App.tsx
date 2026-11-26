@@ -21,6 +21,7 @@ import { ContactUs } from './components/ContactUsModal';
 import { ShareApp } from './components/ShareAppModal';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { AboutPrivacyPage } from './components/AboutPrivacyPage';
+import { Onboarding } from './components/Onboarding';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { DashboardTab, SavedMaterial, StudyTask, UserProgress, Student } from './types';
 import { safeStorageGet, safeStorageSet, sanitizeMaterialForStorage } from './utils/storage';
@@ -69,6 +70,7 @@ export default function App() {
     safeStorageGet<boolean>('zakir_is_admin', false)
   );
   const [aboutPeek, setAboutPeek] = useState<boolean>(false);
+  const [needsOnboarding, setNeedsOnboarding] = useState<boolean>(() => !safeStorageGet<any>('zakir_profile', null));
   const [showAuthModal, setShowAuthModal] = useState<boolean>(() => {
     const dismissed = safeStorageGet<boolean>('zakir_auth_dismissed', false);
     const student = safeStorageGet<Student | null>('zakir_current_student', null);
@@ -492,6 +494,7 @@ export default function App() {
           setCurrentTab('about');
         }}
       />
+      {needsOnboarding && currentStudent && !isAdmin && <Onboarding onDone={() => setNeedsOnboarding(false)} />}
       {aboutPeek && !currentStudent && !isAdmin && (
         <button
           type="button"
