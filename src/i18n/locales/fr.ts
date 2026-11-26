@@ -853,7 +853,7 @@ export const fr: TranslationSchema = {
     emptyMsg: 'Aucune notification pour le moment.',
     welcomeTitle: 'Bienvenue sur Zakir Smart ! 🎓',
     welcomeMsg: 'Les rappels intelligents sont prêts pour soutenir votre progression.',
-    updateTitle: '🚀 Multi-langues & Gemini 4 Actifs',
+    updateTitle: '🚀 Multi-langues',
     updateMsg: 'Profitez de 10 langues, thèmes Clair/Sombre et résumés IA rapides !',
     alerts: [
       { title: '💡 Rappel Espacé', message: 'Révisez 5 cartes mémoire maintenant pour ancrer vos notions !' },
