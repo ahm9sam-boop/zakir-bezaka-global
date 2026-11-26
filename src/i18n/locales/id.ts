@@ -853,7 +853,7 @@ export const id: TranslationSchema = {
     emptyMsg: 'Belum ada notifikasi.',
     welcomeTitle: 'Selamat Datang di Zakir Smart! 🎓',
     welcomeMsg: 'Pengingat belajar cerdas siap menjaga semangat belajarmu.',
-    updateTitle: '🚀 10 Bahasa & Gemini 4 Siap',
+    updateTitle: '🚀 10 Bahasa',
     updateMsg: 'Nikmati 10 bahasa, tema Terang/Gelap, serta ringkasan dan kuis AI cepat!',
     alerts: [
       { title: '💡 Pengulangan Cepat', message: 'Ulangi 5 kartu flash sekarang agar hafalan makin kuat!' },
