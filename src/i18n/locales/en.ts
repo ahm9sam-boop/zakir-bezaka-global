@@ -34,7 +34,7 @@ export const en: TranslationSchema = {
     brandPart2: 'Smart',
     brandTag: 'AI',
     brandSub: 'Your Smart Global Study Platform',
-    aiOnline: 'Gemini 4 Flash & 3.5 Transcribe Ready',
+    aiOnline: 'AI Ready',
     aiOffline: 'AI Connection Unavailable',
     menuLabel: 'Main Menu',
     toolsHeader: 'Study Tools',
@@ -121,7 +121,7 @@ export const en: TranslationSchema = {
   assistant: {
     title: 'AI Study Tutor',
     subtitle: 'Ask questions and get step-by-step explanations in your language',
-    liveEngine: 'Gemini 4 Flash',
+    liveEngine: 'AI',
     attachContext: 'Attach Study Text',
     contextAttached: 'Context Attached',
     clearChat: 'Clear Chat',
@@ -234,7 +234,7 @@ export const en: TranslationSchema = {
   transcription: {
     title: 'AI Lecture Transcription',
     subtitle: 'Record your class live, upload an audio file (MP3, M4A, WAV up to 100MB), or use live browser dictation.',
-    engineBadge: 'Gemini 3.5 Transcribe',
+    engineBadge: 'AI Transcribe',
     micTitle: 'Record via Microphone',
     micStart: 'Press to start recording',
     micStop: 'Recording... press to stop',
