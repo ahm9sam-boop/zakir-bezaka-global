@@ -95,6 +95,33 @@ export const Summarizer: React.FC<SummarizerProps> = ({
     }
   };
 
+  const buildFullText = () => {
+    if (!result) return '';
+    return `${result.title}\n\n${t.summarizer.overviewTitle}:\n${result.overview}\n\n${t.summarizer.pointsTitle}:\n${result.mainPoints.map((p, i) => `${i + 1}. ${p}`).join('\n')}\n\n${t.summarizer.defsTitle}:\n${result.definitions.map((d) => `• ${d.term}: ${d.definition}`).join('\n')}\n\n${t.summarizer.tipsTitle}:\n${result.examTips.map((tip) => `* ${tip}`).join('\n')}`;
+  };
+
+  const handleDownloadTxt = () => {
+    const txt = buildFullText();
+    if (!txt) return;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob(['\ufeff' + txt], { type: 'text/plain;charset=utf-8' }));
+    a.download = 'summary.txt';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  };
+
+  const handleDownloadPdf = () => {
+    const txt = buildFullText();
+    if (!txt) return;
+    const esc = txt.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const w = window.open('', '_blank');
+    if (!w) return;
+    w.document.write(`<!doctype html><html dir="auto"><head><meta charset="utf-8"><title>Summary</title><style>body{font-family:system-ui,Tahoma,sans-serif;line-height:1.8;padding:24px;white-space:pre-wrap}</style></head><body>${esc}</body></html>`);
+    w.document.close();
+    w.focus();
+    setTimeout(() => w.print(), 300);
+  };
+
   const handleCopy = () => {
     if (!result) return;
     const fullText = `${result.title}\n\n${t.summarizer.overviewTitle}:\n${result.overview}\n\n${t.summarizer.pointsTitle}:\n${result.mainPoints.map((p, i) => `${i + 1}. ${p}`).join('\n')}\n\n${t.summarizer.defsTitle}:\n${result.definitions.map((d) => `• ${d.term}: ${d.definition}`).join('\n')}\n\n${t.summarizer.tipsTitle}:\n${result.examTips.map((tip) => `* ${tip}`).join('\n')}`;
@@ -305,6 +332,9 @@ export const Summarizer: React.FC<SummarizerProps> = ({
                 {isCopied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
                 <span>{isCopied ? t.common.copied : t.common.copy}</span>
               </button>
+
+              <button type="button" onClick={handleDownloadTxt} className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs border border-slate-200 dark:border-slate-700 transition cursor-pointer">TXT</button>
+              <button type="button" onClick={handleDownloadPdf} className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs border border-slate-200 dark:border-slate-700 transition cursor-pointer">PDF</button>
 
               <button
                 type="button"
