@@ -34,7 +34,7 @@ export const id: TranslationSchema = {
     brandPart2: 'Smart',
     brandTag: 'AI',
     brandSub: 'Platform Belajar Cerdas Global Anda',
-    aiOnline: 'Gemini 4 Flash & 3.5 Transcribe Siap',
+    aiOnline: 'AI Ready',
     aiOffline: 'Koneksi AI Tidak Tersedia',
     menuLabel: 'Menu Utama',
     toolsHeader: 'Alat Belajar',
@@ -121,7 +121,7 @@ export const id: TranslationSchema = {
   assistant: {
     title: 'Tutor Belajar AI',
     subtitle: 'Ajukan pertanyaan dan dapatkan penjelasan langkah demi langkah dalam bahasamu',
-    liveEngine: 'Gemini 4 Flash',
+    liveEngine: 'AI',
     attachContext: 'Lampirkan Materi',
     contextAttached: 'Konteks Terpasang',
     clearChat: 'Hapus Chat',
@@ -234,7 +234,7 @@ export const id: TranslationSchema = {
   transcription: {
     title: 'Transkripsi Kuliah AI',
     subtitle: 'Rekam langsung lewat mikrofon, unggah file audio (MP3, M4A, WAV hingga 100 MB), atau dikte langsung.',
-    engineBadge: 'Gemini 3.5 Transcribe',
+    engineBadge: 'AI Transcribe',
     micTitle: 'Rekam via Mikrofon',
     micStart: 'Tekan untuk mulai merekam',
     micStop: 'Merekam... tekan untuk berhenti',
