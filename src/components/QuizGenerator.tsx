@@ -49,6 +49,9 @@ export const QuizGenerator: React.FC<QuizGeneratorProps> = ({
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [examMode, setExamMode] = useState(false);
+  const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
+  const ar = lang === 'ar';
 
   const questions = customQuestions && customQuestions.length > 0 ? customQuestions : t.quizzes.sampleQuestions;
 
@@ -99,6 +102,7 @@ export const QuizGenerator: React.FC<QuizGeneratorProps> = ({
       }
 
       setCustomQuestions(data.questions);
+      if (examMode) startExam(data.questions.length);
     } catch {
       setErrorMsg(t.quizzes.errorMsg);
     } finally {
@@ -115,6 +119,7 @@ export const QuizGenerator: React.FC<QuizGeneratorProps> = ({
   };
 
   const handleSubmitQuiz = () => {
+    setSecondsLeft(null);
     setIsSubmitted(true);
 
     let correctCount = 0;
@@ -136,7 +141,25 @@ export const QuizGenerator: React.FC<QuizGeneratorProps> = ({
     }
   };
 
+  const startExam = (n: number) => {
+    setSelectedAnswers({});
+    setIsSubmitted(false);
+    setCurrentIdx(0);
+    setSecondsLeft(Math.max(1, n) * 90);
+  };
+
+  useEffect(() => {
+    if (secondsLeft === null || isSubmitted) return;
+    if (secondsLeft <= 0) { handleSubmitQuiz(); return; }
+    const id = setTimeout(() => setSecondsLeft((v) => (v === null ? v : v - 1)), 1000);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [secondsLeft, isSubmitted]);
+
+  const fmtTime = (sec: number) => `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`;
+
   const handleResetQuiz = () => {
+    setSecondsLeft(null);
     setSelectedAnswers({});
     setIsSubmitted(false);
     setCurrentIdx(0);
@@ -220,6 +243,18 @@ export const QuizGenerator: React.FC<QuizGeneratorProps> = ({
             <span>{errorMsg}</span>
           </div>
         )}
+
+        <div className="flex flex-wrap items-center gap-3 text-xs">
+          <label className="flex items-center gap-2 cursor-pointer text-slate-700 dark:text-slate-300 font-medium">
+            <input type="checkbox" checked={examMode} onChange={(e) => { setExamMode(e.target.checked); if (!e.target.checked) setSecondsLeft(null); }} />
+            <span>{ar ? 'وضع الامتحان (بوقت محدد ودرجة في الآخر)' : 'Exam mode (timed, scored at the end)'}</span>
+          </label>
+          {examMode && !isSubmitted && secondsLeft === null && questions.length > 0 && (
+            <button type="button" onClick={() => startExam(questions.length)} className="px-3 py-1.5 rounded-lg bg-amber-500 text-slate-950 font-bold cursor-pointer">
+              {ar ? `ابدأ الامتحان الآن (${Math.round(questions.length * 1.5)} دقيقة)` : `Start exam now (${Math.round(questions.length * 1.5)} min)`}
+            </button>
+          )}
+        </div>
 
         <div className="flex flex-wrap items-center justify-between gap-4 pt-1">
           <div className="flex flex-wrap items-center gap-3">
@@ -330,6 +365,11 @@ export const QuizGenerator: React.FC<QuizGeneratorProps> = ({
             </div>
 
             <div className="flex items-center gap-3">
+              {secondsLeft !== null && !isSubmitted && (
+                <span className={`font-mono font-bold text-sm px-2 py-0.5 rounded-lg border ${secondsLeft <= 30 ? 'text-rose-600 border-rose-500' : 'text-amber-600 border-amber-500'}`} dir="ltr">
+                  ⏱ {fmtTime(secondsLeft)}
+                </span>
+              )}
               {isSubmitted && (
                 <div className="flex items-center gap-1.5 font-bold text-sm">
                   <Award className="w-4 h-4 text-amber-500 dark:text-amber-400" />
@@ -426,7 +466,7 @@ export const QuizGenerator: React.FC<QuizGeneratorProps> = ({
                 <button
                   type="button"
                   onClick={handleSubmitQuiz}
-                  disabled={!allAnswered}
+                  disabled={!allAnswered && secondsLeft === null}
                   className="flex items-center gap-2 px-5 sm:px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 disabled:opacity-40 text-slate-950 font-bold text-xs sm:text-sm shadow-md transition cursor-pointer"
                 >
                   <CheckCircle2 className="w-4 h-4" />
