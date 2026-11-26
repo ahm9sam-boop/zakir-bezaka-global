@@ -7,8 +7,28 @@ interface AboutPrivacyPageProps {
   onNavigate: (tab: DashboardTab) => void;
 }
 
+
+const NOTES = {
+  en: {
+    ai: 'AI features (tutor, summaries, quizzes, flashcards, mind maps) send the text you submit to AI providers (Google Gemini, Groq, OpenRouter or Pollinations, depending on availability) to generate the answer. Audio and video files you upload for transcription are sent from our server to Groq (Whisper) for speech-to-text; the server deletes the temporary file when the job ends. Always verify important academic details.',
+    points: [
+      'PDF, Word and text files are read inside your browser. Images are read by an OCR script (Tesseract) loaded from a public CDN, and the image stays in your browser.',
+      'Audio and video files are uploaded to our server and then to Groq for transcription. Do not upload recordings that contain information you do not want shared with these providers.',
+      'If advertising is enabled, ads are served by Google AdSense, which may use cookies. Your study content is not shared with advertisers, and we do not sell your data.',
+    ],
+  },
+  ar: {
+    ai: 'ميزات الذكاء الاصطناعي (المدرّس، التلخيص، الاختبارات، البطاقات، الخرائط الذهنية) ترسل النص الذي تدخله لمزوّدي ذكاء اصطناعي (Google Gemini أو Groq أو OpenRouter أو Pollinations حسب المتاح) لتوليد الإجابة. ملفات الصوت والفيديو التي ترفعها للتفريغ تُرسل من خادمنا إلى Groq (Whisper) لتحويل الكلام إلى نص، ويحذف الخادم الملف المؤقت بعد انتهاء المهمة. راجع دائماً المعلومات الأكاديمية المهمة.',
+    points: [
+      'ملفات PDF وWord والنص تُقرأ داخل متصفحك. الصور تُقرأ بسكربت OCR (Tesseract) يُحمّل من CDN عام وتبقى الصورة في متصفحك.',
+      'ملفات الصوت والفيديو تُرفع إلى خادمنا ثم إلى Groq للتفريغ. لا ترفع تسجيلات فيها معلومات لا تريد مشاركتها مع هذه الجهات.',
+      'عند تفعيل الإعلانات تُعرض عبر Google AdSense وقد يستخدم ملفات تعريف الارتباط. محتوى مذاكرتك لا يُشارَك مع المعلنين ولا نبيع بياناتك.',
+    ],
+  },
+};
+
 export const AboutPrivacyPage: React.FC<AboutPrivacyPageProps> = ({ onNavigate }) => {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-fadeIn">
@@ -44,7 +64,7 @@ export const AboutPrivacyPage: React.FC<AboutPrivacyPageProps> = ({ onNavigate }
             <h3 className="font-bold text-lg text-slate-900 dark:text-white">{t.about.aiTitle}</h3>
           </div>
           <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-            {t.about.aiBody}
+            {NOTES[lang === 'ar' ? 'ar' : 'en'].ai}
           </p>
         </section>
       </div>
@@ -56,7 +76,7 @@ export const AboutPrivacyPage: React.FC<AboutPrivacyPageProps> = ({ onNavigate }
           <h3 className="font-bold text-lg text-slate-900 dark:text-white">{t.about.privacyTitle}</h3>
         </div>
         <ul className="space-y-3">
-          {t.about.privacyPoints.map((point, idx) => (
+          {[...t.about.privacyPoints.filter((_, i) => i === 0 || i === 2), ...NOTES[lang === 'ar' ? 'ar' : 'en'].points].map((point, idx) => (
             <li
               key={idx}
               className="flex items-start gap-3 text-sm text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/50 border border-slate-200/80 dark:border-slate-800 rounded-xl p-3.5"
