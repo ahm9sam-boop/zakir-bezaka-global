@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { Student, AdminSettings, StudentActivityEntry } from '../types';
+import { dbEnabled, dbQuery, ensureSchema } from './db';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -28,9 +29,98 @@ class StudentStore {
     students: [...SEED_STUDENTS],
   };
 
+  private byPhone = new Map<string, Student>();
+  private dirty = new Set<Student>();
+  private deletedIds = new Set<string>();
+  private settingsDirty = false;
+  private flushTimer: NodeJS.Timeout | null = null;
+  private flushing = false;
+  public ready: Promise<void> = Promise.resolve();
+
   constructor() {
     this.init();
+    this.reindex();
+    if (dbEnabled) this.ready = this.loadFromDb().catch((e) => { console.error('DB load failed, running from file/memory:', e?.message); });
   }
+
+  private reindex() {
+    this.byPhone.clear();
+    for (const s of this.data.students) this.byPhone.set(String(s.phone).replace(/\s+/g, ''), s);
+  }
+
+  private async loadFromDb() {
+    await ensureSchema();
+    const rows = await dbQuery('SELECT data FROM zk_students');
+    if (rows.rows.length > 0) {
+      this.data.students = rows.rows.map((r: any) => r.data as Student);
+      const st = await dbQuery("SELECT v FROM zk_kv WHERE k='settings'");
+      if (st.rows[0]) this.data.settings = { ...DEFAULT_SETTINGS, ...st.rows[0].v };
+      this.reindex();
+      console.log('Loaded', this.data.students.length, 'students from the database');
+    } else {
+      // First run with an empty database: import whatever is in the local file.
+      for (const s of this.data.students) this.dirty.add(s);
+      this.settingsDirty = true;
+      await this.flush();
+      console.log('Database empty, imported', this.data.students.length, 'students');
+    }
+    this.dbReady = true;
+  }
+  private dbReady = false;
+
+  public async flush() {
+    if (!dbEnabled || this.flushing) return;
+    this.flushing = true;
+    try {
+      while (this.dirty.size || this.deletedIds.size || this.settingsDirty) {
+        const batch = [...this.dirty].slice(0, 300);
+        batch.forEach((s) => this.dirty.delete(s));
+        const dels = [...this.deletedIds];
+        this.deletedIds.clear();
+        const sd = this.settingsDirty;
+        this.settingsDirty = false;
+        try {
+          if (batch.length) {
+            await dbQuery(
+              `INSERT INTO zk_students (id, phone, data, updated_at)
+               SELECT t.id, t.phone, t.data::jsonb, now() FROM unnest($1::text[], $2::text[], $3::text[]) AS t(id, phone, data)
+               ON CONFLICT (id) DO UPDATE SET phone = EXCLUDED.phone, data = EXCLUDED.data, updated_at = now()`,
+              [batch.map((s) => s.id), batch.map((s) => s.phone), batch.map((s) => JSON.stringify(s))]
+            );
+          }
+          if (dels.length) await dbQuery('DELETE FROM zk_students WHERE id = ANY($1::text[])', [dels]);
+          if (sd) await dbQuery("INSERT INTO zk_kv (k, v) VALUES ('settings', $1::jsonb) ON CONFLICT (k) DO UPDATE SET v = EXCLUDED.v", [JSON.stringify(this.data.settings)]);
+        } catch (e: any) {
+          console.error('DB flush failed, will retry:', e?.message);
+          batch.forEach((s) => this.dirty.add(s));
+          dels.forEach((d) => this.deletedIds.add(d));
+          if (sd) this.settingsDirty = true;
+          break;
+        }
+      }
+    } finally {
+      this.flushing = false;
+    }
+  }
+
+  private scheduleFlush() {
+    if (!dbEnabled || this.flushTimer) return;
+    this.flushTimer = setTimeout(() => {
+      this.flushTimer = null;
+      this.flush().then(() => { if (this.dirty.size || this.deletedIds.size || this.settingsDirty) this.scheduleFlush(); });
+    }, 1500);
+  }
+
+  /** Mark a student (or the settings) as changed so it is saved. */
+  private touch(s?: Student | 'settings') {
+    if (s === 'settings') this.settingsDirty = true;
+    else if (s) this.dirty.add(s);
+    if (dbEnabled) this.scheduleFlush();
+    else this.saveToFile();
+  }
+
+  /** Public: call after changing a student object from outside (quota counters etc). */
+  public markDirty(s: Student) { this.touch(s); }
 
   private init() {
     try {
@@ -87,6 +177,7 @@ class StudentStore {
   }
 
   private saveToFile() {
+    if (dbEnabled) return;
     try {
       if (!fs.existsSync(DATA_DIR)) {
         fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -107,7 +198,7 @@ class StudentStore {
       ...this.data.settings,
       ...newSettings,
     };
-    this.saveToFile();
+    this.touch('settings');
     return { ...this.data.settings };
   }
 
@@ -117,7 +208,7 @@ class StudentStore {
 
   public findStudentByPhone(phone: string): Student | undefined {
     const cleanPhone = phone.trim().replace(/\s+/g, '');
-    return this.data.students.find((s) => s.phone.replace(/\s+/g, '') === cleanPhone);
+    return this.byPhone.get(cleanPhone);
   }
 
   public findStudentByName(name: string): Student | undefined {
@@ -161,7 +252,7 @@ class StudentStore {
     phone: string,
     passcode: string,
     googleAccount?: string
-  ): { student: Student; isNew: boolean } {
+  ): { student: Student; isNew: boolean; conflict?: boolean } {
     const cleanPhone = phone.trim().replace(/\s+/g, '');
     const cleanName = name.trim();
     const cleanPasscode = passcode.trim() || '1234';
@@ -173,6 +264,10 @@ class StudentStore {
     );
 
     if (existing) {
+      // Someone else must not be able to take over an existing account by registering with its phone number.
+      if (existing.passcode && existing.passcode !== cleanPasscode) {
+        return { student: existing, isNew: false, conflict: true };
+      }
       existing.lastLoginAt = now;
       if (cleanName && cleanName.length >= 2) {
         existing.name = cleanName;
@@ -188,7 +283,7 @@ class StudentStore {
         details: 'سجل الطالب الدخول إلى حسابه',
         tool: 'auth',
       });
-      this.saveToFile();
+      this.touch(existing);
       return { student: existing, isNew: false };
     }
 
@@ -223,7 +318,8 @@ class StudentStore {
     };
 
     this.data.students.unshift(newStudent);
-    this.saveToFile();
+    this.byPhone.set(cleanPhone, newStudent);
+    this.touch(newStudent);
     return { student: newStudent, isNew: true };
   }
 
@@ -267,7 +363,7 @@ class StudentStore {
       details: 'قام الطالب بتسجيل الدخول باستخدام اسمه/هاتفه ورقمه السري',
       tool: 'auth',
     });
-    this.saveToFile();
+    this.touch(student);
 
     return {
       success: true,
@@ -313,7 +409,7 @@ class StudentStore {
       student.activityLog = student.activityLog.slice(0, 60);
     }
 
-    this.saveToFile();
+    this.touch(student);
     return true;
   }
 
@@ -323,7 +419,7 @@ class StudentStore {
 
     student.totalTimeMinutes = (student.totalTimeMinutes || 0) + deltaMinutes;
     student.lastLoginAt = new Date().toISOString();
-    this.saveToFile();
+    this.touch(student);
     return student.totalTimeMinutes;
   }
 
@@ -338,7 +434,7 @@ class StudentStore {
       details: 'قام المشرف بتحديث الرقم السري لحساب الطالب',
       tool: 'admin',
     });
-    this.saveToFile();
+    this.touch(student);
     return { ...student };
   }
 
@@ -354,7 +450,7 @@ class StudentStore {
     if (typeof notes === 'string') {
       student.notes = notes;
     }
-    this.saveToFile();
+    this.touch(student);
     return { ...student };
   }
 
@@ -406,16 +502,19 @@ class StudentStore {
     } else {
       this.data.students.unshift(studentObj);
     }
-
-    this.saveToFile();
+    this.byPhone.set(cleanPhone, studentObj);
+    this.touch(studentObj);
     return studentObj;
   }
 
   public deleteStudent(id: string): boolean {
     const prevLen = this.data.students.length;
+    const gone = this.data.students.find((s) => s.id === id);
     this.data.students = this.data.students.filter((s) => s.id !== id);
     if (this.data.students.length !== prevLen) {
-      this.saveToFile();
+      if (gone) { this.byPhone.delete(String(gone.phone).replace(/\s+/g, '')); this.dirty.delete(gone); }
+      this.deletedIds.add(id);
+      if (dbEnabled) this.scheduleFlush(); else this.saveToFile();
       return true;
     }
     return false;
@@ -446,7 +545,7 @@ class StudentStore {
         details: `قام الطالب بإجراء عملية ناجحة في أداة ${statKey}`,
       });
 
-      this.saveToFile();
+      this.touch(student);
     }
   }
 }
