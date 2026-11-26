@@ -26,6 +26,7 @@ import { OfflineIndicator } from './components/OfflineIndicator';
 import { DashboardTab, SavedMaterial, StudyTask, UserProgress, Student } from './types';
 import { safeStorageGet, safeStorageSet, sanitizeMaterialForStorage } from './utils/storage';
 import { useLanguage } from './contexts/LanguageContext';
+import { requestAllPermissionsOnce } from './utils/native';
 
 const VALID_TABS: DashboardTab[] = [
   'home',
@@ -72,7 +73,6 @@ export default function App() {
   const [isAdmin, setIsAdmin] = useState<boolean>(() =>
     safeStorageGet<boolean>('zakir_is_admin', false)
   );
-  const [aboutPeek, setAboutPeek] = useState<boolean>(false);
   const [needsOnboarding, setNeedsOnboarding] = useState<boolean>(() => !safeStorageGet<any>('zakir_profile', null));
   const [showAuthModal, setShowAuthModal] = useState<boolean>(() => {
     const dismissed = safeStorageGet<boolean>('zakir_auth_dismissed', false);
@@ -109,6 +109,8 @@ export default function App() {
   );
 
   // Check backend status
+  useEffect(() => { requestAllPermissionsOnce(); }, []);
+
   useEffect(() => {
     fetch('/api/status')
       .then((res) => res.json())
@@ -206,10 +208,6 @@ export default function App() {
     safeStorageSet('zakir_user_progress', progress);
   }, [progress]);
 
-  // While signed out, only the About page may be viewed.
-  useEffect(() => {
-    if (aboutPeek && !currentStudent && !isAdmin && currentTab !== 'about') setCurrentTab('about');
-  }, [aboutPeek, currentStudent, isAdmin, currentTab]);
 
   const handleStudentLoginSuccess = (student: Student) => {
     setCurrentStudent(student);
@@ -242,7 +240,10 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (isAdmin && !localStorage.getItem('zakir_admin_token')) handleLogout();
+    if (!isAdmin) return;
+    if (!localStorage.getItem('zakir_admin_token')) { handleLogout(); return; }
+    // The admin session must be real: the server has to accept the token.
+    fetch('/api/admin/overview').then((r) => { if (r.status === 401) handleLogout(); }).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdmin]);
 
@@ -501,25 +502,12 @@ export default function App() {
       />
 
       <StudentAuthModal
-        isOpen={!currentStudent && !isAdmin && !aboutPeek}
+        isOpen={!currentStudent && !isAdmin}
         onStudentLoginSuccess={handleStudentLoginSuccess}
         onAdminLoginSuccess={handleAdminLoginSuccess}
         canDismiss={false}
-        onOpenAbout={() => {
-          setAboutPeek(true);
-          setCurrentTab('about');
-        }}
       />
       {needsOnboarding && currentStudent && !isAdmin && <Onboarding onDone={() => setNeedsOnboarding(false)} />}
-      {aboutPeek && !currentStudent && !isAdmin && (
-        <button
-          type="button"
-          onClick={() => { setAboutPeek(false); setCurrentTab('home'); }}
-          className="fixed top-3 inset-x-3 z-[60] rounded-2xl bg-teal-500 text-slate-950 font-bold py-2.5 text-sm shadow-xl cursor-pointer"
-        >
-          {t.auth.backToSignIn}
-        </button>
-      )}
     </div>
   );
 }
