@@ -15,150 +15,12 @@ interface StoreData {
 }
 
 const DEFAULT_SETTINGS: AdminSettings = {
-  adminPasscode: '1q1q',
+  adminPasscode: '',
   autoApprove: true, // Immediate entry for registered students by default
   requirePhoneVerification: false,
 };
 
-const SEED_STUDENTS: Student[] = [
-  {
-    id: 'std_seed_1',
-    name: 'أحمد محمود سامي',
-    phone: '01012345678',
-    passcode: '1234',
-    status: 'active',
-    registeredAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-    lastLoginAt: new Date(Date.now() - 25 * 60 * 1000).toISOString(),
-    notes: 'طالب في كلية الهندسة - مجتهد',
-    totalTimeMinutes: 78,
-    stats: {
-      transcriptions: 4,
-      summaries: 6,
-      quizzes: 5,
-      flashcards: 12,
-    },
-    activityLog: [
-      {
-        id: 'act_seed_1_1',
-        type: 'action',
-        title: 'تفريغ محاضرة صوتية',
-        details: 'قام بتفريغ وتلخيص تسجيل: "محاضرة الرياضيات التطبيقية والمعادلات التفاضلية"',
-        tool: 'transcription',
-        timestamp: new Date(Date.now() - 35 * 60 * 1000).toISOString(),
-      },
-      {
-        id: 'act_seed_1_2',
-        type: 'navigation',
-        title: 'فتح أداة الخرائط الذهنية',
-        details: 'استعرض خريطة ذهنية لمقرر الفيزياء الذرية',
-        tool: 'mindmaps',
-        timestamp: new Date(Date.now() - 50 * 60 * 1000).toISOString(),
-      },
-      {
-        id: 'act_seed_1_3',
-        type: 'action',
-        title: 'إنشاء ملخص ذكي PDF',
-        details: 'قام برفع ملف تلخيص "مبادئ الهندسة الكهربائية" واستخراج المصطلحات',
-        tool: 'summarizer',
-        timestamp: new Date(Date.now() - 90 * 60 * 1000).toISOString(),
-      },
-      {
-        id: 'act_seed_1_4',
-        type: 'action',
-        title: 'خاض اختباراً تفاعلياً',
-        details: 'أجرى اختبار 10 أسئلة وحصل على 90%',
-        tool: 'quizzes',
-        timestamp: new Date(Date.now() - 140 * 60 * 1000).toISOString(),
-      },
-      {
-        id: 'act_seed_1_5',
-        type: 'session',
-        title: 'تسجيل دخول إلى المنصة',
-        details: 'بدء جلسة مذاكرة (مدة الجلسة: 32 دقيقة)',
-        tool: 'auth',
-        timestamp: new Date(Date.now() - 180 * 60 * 1000).toISOString(),
-      },
-    ],
-  },
-  {
-    id: 'std_seed_2',
-    name: 'سارة عبد الرحمن حسن',
-    phone: '01198765432',
-    passcode: '1234',
-    status: 'active',
-    registeredAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    lastLoginAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    notes: 'تم تفعيل الحساب بعد التأكد من الاشتراك',
-    totalTimeMinutes: 42,
-    stats: {
-      transcriptions: 2,
-      summaries: 4,
-      quizzes: 3,
-      flashcards: 8,
-    },
-    activityLog: [
-      {
-        id: 'act_seed_2_1',
-        type: 'action',
-        title: 'تفريغ محاضرة صوتية',
-        details: 'تفريغ صوتي لمحاضرة: "مناهج البحث العلمي وتصميم التجارب"',
-        tool: 'transcription',
-        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-      },
-      {
-        id: 'act_seed_2_2',
-        type: 'action',
-        title: 'مراجعة بطاقات استذكار',
-        details: 'قام بمراجعة 8 بطاقات في علم النفس المعرفي',
-        tool: 'flashcards',
-        timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
-      },
-      {
-        id: 'act_seed_2_3',
-        type: 'navigation',
-        title: 'فتح المساعد الدراسي الذكي',
-        details: 'سأل المساعد عن الفرق بين الفرضية الصفرية والبديلة',
-        tool: 'assistant',
-        timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-      },
-    ],
-  },
-  {
-    id: 'std_seed_3',
-    name: 'عمر خالد إبراهيم',
-    phone: '01234567890',
-    passcode: '1234',
-    status: 'active',
-    registeredAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
-    lastLoginAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
-    notes: 'طالب مسجل - مفعل فورياً',
-    totalTimeMinutes: 15,
-    stats: {
-      transcriptions: 0,
-      summaries: 0,
-      quizzes: 0,
-      flashcards: 0,
-    },
-    activityLog: [
-      {
-        id: 'act_seed_3_1',
-        type: 'session',
-        title: 'إنشاء الحساب والدخول الأول',
-        details: 'سجل حسابه بالاسم ورقم الهاتف ودخل فوراً للمنصة',
-        tool: 'auth',
-        timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
-      },
-      {
-        id: 'act_seed_3_2',
-        type: 'navigation',
-        title: 'فتح الصفحة الرئيسية واستعراض الأدوات',
-        details: 'استعرض أدوات تفريغ المحاضرات والملخصات والخرائط الذهنية',
-        tool: 'home',
-        timestamp: new Date(Date.now() - 55 * 60 * 1000).toISOString(),
-      },
-    ],
-  },
-];
+const SEED_STUDENTS: Student[] = [];
 
 class StudentStore {
   private data: StoreData = {
@@ -181,6 +43,7 @@ class StudentStore {
         const parsed = JSON.parse(raw);
         if (parsed.students && Array.isArray(parsed.students)) {
           this.data = parsed;
+          this.data.students = this.data.students.filter((x: any) => !String(x.id || '').startsWith('std_seed_'));
           // Ensure settings defaults
           this.data.settings = { ...DEFAULT_SETTINGS, ...parsed.settings };
 
@@ -235,6 +98,7 @@ class StudentStore {
   }
 
   public getSettings(): AdminSettings {
+    if (process.env.ADMIN_PASSCODE && process.env.ADMIN_PASSCODE.length >= 6) return { ...this.data.settings, adminPasscode: process.env.ADMIN_PASSCODE };
     return { ...this.data.settings };
   }
 
