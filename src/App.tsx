@@ -109,6 +109,16 @@ export default function App() {
   );
 
   // Check backend status
+  // Keep work tabs alive after the first visit so nothing the student typed or generated is lost when switching sections
+  const [visitedTabs, setVisitedTabs] = useState<string[]>([]);
+  useEffect(() => {
+    setVisitedTabs((v) => (v.includes(currentTab) ? v : [...v, currentTab]));
+  }, [currentTab]);
+  const keepTab = (tab: string, node: React.ReactNode) =>
+    visitedTabs.includes(tab) || currentTab === tab ? (
+      <div key={['quizzes', 'flashcards', 'mindmaps', 'assistant'].includes(tab) ? tab + sharedText.length + sharedText.slice(0, 20) : tab} style={currentTab === tab ? undefined : { display: 'none' }}>{node}</div>
+    ) : null;
+
   useEffect(() => { requestAllPermissionsOnce(); }, []);
 
   useEffect(() => {
@@ -382,7 +392,7 @@ export default function App() {
             />
           )}
 
-          {currentTab === 'assistant' && (
+          {keepTab('assistant',
             <AiAssistant
               initialContext={sharedText}
               onSaveMaterial={handleSaveMaterial}
@@ -390,7 +400,7 @@ export default function App() {
             />
           )}
 
-          {currentTab === 'summarizer' && (
+          {keepTab('summarizer',
             <Summarizer
               initialText={sharedText}
               onSaveMaterial={handleSaveMaterial}
@@ -402,7 +412,7 @@ export default function App() {
             />
           )}
 
-          {currentTab === 'pdf_reader' && (
+          {keepTab('pdf_reader',
             <PdfReader
               onSendToAssistant={(text) => {
                 setSharedText(text);
@@ -423,7 +433,7 @@ export default function App() {
             />
           )}
 
-          {currentTab === 'transcription' && (
+          {keepTab('transcription',
             <LectureTranscription
               onSaveMaterial={handleSaveMaterial}
               onSendToSummarizer={(text) => {
@@ -435,7 +445,7 @@ export default function App() {
             />
           )}
 
-          {currentTab === 'mindmaps' && (
+          {keepTab('mindmaps',
             <MindMaps
               initialTopic={sharedText.slice(0, 80)}
               hasGeminiKey={hasGeminiKey}
@@ -443,7 +453,7 @@ export default function App() {
             />
           )}
 
-          {currentTab === 'quizzes' && (
+          {keepTab('quizzes',
             <QuizGenerator
               initialText={sharedText}
               onSaveMaterial={handleSaveMaterial}
@@ -453,7 +463,7 @@ export default function App() {
             />
           )}
 
-          {currentTab === 'flashcards' && (
+          {keepTab('flashcards',
             <FlashcardsView
               initialText={sharedText}
               onSaveMaterial={handleSaveMaterial}
@@ -465,7 +475,7 @@ export default function App() {
 
           {currentTab === 'studylab' && <StudyLab />}
 
-          {currentTab === 'planner' && (
+          {keepTab('planner',
             <StudyPlanner
               tasks={tasks}
               onUpdateTasks={handleUpdateTasks}
