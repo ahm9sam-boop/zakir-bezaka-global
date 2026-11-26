@@ -191,6 +191,7 @@ export const StudentAuthModal: React.FC<StudentAuthModalProps> = ({
       const data = await response.json();
 
       if (response.ok && data.success) {
+        try { localStorage.setItem('zakir_admin_token', String(data.token || '')); } catch {}
         onAdminLoginSuccess();
       } else {
         setErrorMessage(data.error || t.auth.errors.badAdminPin);
