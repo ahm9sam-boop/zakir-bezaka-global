@@ -180,3 +180,20 @@ export function aiAvailable() {
 export function getAi() {
   return { models: { generateContent: async (req: any) => ({ text: await generate(req) }) } };
 }
+
+// Live check of the Gemini key (status code only, never the key). Cached for 5 minutes.
+let gh: { t: number; v: string } | null = null;
+export async function geminiHealth(): Promise<string> {
+  const keys = geminiKeys();
+  if (!keys.length) return 'no key';
+  if (gh && Date.now() - gh.t < 5 * 60e3) return gh.v;
+  let v = 'error';
+  try {
+    const r = await timed(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${keys[0]}`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: 'hi' }] }] }) }, 15000);
+    if (r.ok) v = 'ok';
+    else { const j: any = await r.json().catch(() => ({})); v = `http ${r.status} ${String(j?.error?.status || '')} ${String(j?.error?.message || '').replace(/key[^ ]*/gi, '').slice(0, 120)}`; }
+  } catch (e: any) { v = 'network ' + (e?.message || ''); }
+  gh = { t: Date.now(), v };
+  return v;
+}
