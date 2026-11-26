@@ -7,6 +7,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import os from 'os';
+import crypto from 'crypto';
 import { studentStore } from './src/server/studentStore';
 
 dotenv.config();
@@ -120,6 +121,37 @@ function getErrorMessage(langCode: string, type: 'no_key' | 'ai_failed' | 'bad_i
 }
 
 // 1. Status API
+
+// ---- API access control: signed tokens (students and admin). AI, upload and admin routes need one.
+const TOKEN_SECRET = crypto.createHash('sha256').update('zk-v1|' + (process.env.TOKEN_SECRET || '') + '|' + (process.env.GROQ_API_KEY || '') + '|' + (process.env.GEMINI_API_KEY || '')).digest('hex');
+const sig = (v: string) => crypto.createHmac('sha256', TOKEN_SECRET).update(v).digest('hex').slice(0, 40);
+const studentToken = (phone: string) => 's.' + Buffer.from(phone).toString('base64url') + '.' + sig('s|' + phone);
+const adminToken = () => 'a.' + sig('admin');
+const withToken = (st: any) => (st && st.phone ? { ...st, token: studentToken(String(st.phone)) } : st);
+const safeEq = (a: string, b: string) => a.length === b.length && crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
+function authLevel(req: express.Request): 'admin' | 'student' | null {
+  const h = String(req.headers.authorization || '');
+  const t = h.startsWith('Bearer ') ? h.slice(7).trim() : '';
+  if (!t) return null;
+  if (t.startsWith('a.')) return safeEq(t, adminToken()) ? 'admin' : null;
+  const m = t.match(/^s\.([A-Za-z0-9_-]+)\.([a-f0-9]{40})$/);
+  if (!m) return null;
+  let phone = '';
+  try { phone = Buffer.from(m[1], 'base64url').toString(); } catch { return null; }
+  if (!safeEq(m[2], sig('s|' + phone))) return null;
+  const st: any = studentStore.findStudentByPhone(phone);
+  if (!st || st.status === 'blocked') return null;
+  return 'student';
+}
+app.use('/api', (req, res, next) => {
+  const p = req.path;
+  if (p === '/status' || p === '/ads-config' || p === '/contact' || p.startsWith('/auth/')) return next();
+  const lvl = authLevel(req);
+  if (p.startsWith('/admin/')) return lvl === 'admin' ? next() : res.status(401).json({ error: 'Admin sign-in required.' });
+  if (lvl) return next();
+  return res.status(401).json({ error: 'Please sign in first.' });
+});
+
 app.get('/api/status', (_req, res) => {
   const apiKey = process.env.GEMINI_API_KEY;
   const isKeyConfigured = true;
@@ -830,7 +862,7 @@ app.post('/api/auth/student-register', (req, res) => {
     return res.json({
       success: true,
       status: student.status,
-      student,
+      student: withToken(student),
       isNew,
     });
   } catch (err: any) {
@@ -874,7 +906,7 @@ app.post('/api/auth/student-login', (req, res) => {
     return res.json({
       success: true,
       status: student.status,
-      student,
+      student: withToken(student),
     });
   } catch (err: any) {
     console.error('Student login error:', err);
@@ -891,18 +923,18 @@ app.get('/api/auth/student-check', (req, res) => {
   if (!student) {
     return res.status(404).json({ error: 'Student not found' });
   }
-  return res.json({ student, status: student.status });
+  return res.json({ student: withToken(student), status: student.status });
 });
 
 app.post('/api/auth/admin-login', (req, res) => {
   const { passcode } = req.body || {};
   const settings = studentStore.getSettings();
-  if (!passcode || String(passcode).trim() !== settings.adminPasscode) {
+  if (!settings.adminPasscode || settings.adminPasscode.length < 6 || !passcode || String(passcode).trim() !== settings.adminPasscode) {
     return res.status(401).json({ error: 'Invalid admin passcode' });
   }
   return res.json({
     success: true,
-    token: 'admin_token_' + Date.now(),
+    token: adminToken(),
   });
 });
 
