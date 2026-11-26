@@ -39,6 +39,31 @@ async function timed(url: string, init: any, ms: number) {
   }
 }
 
+
+// Google retires Gemini model names often: ask Google which flash models this key can use now, newest first.
+let gmCache: { t: number; key: string; list: string[] } | null = null;
+async function geminiModels(key: string): Promise<string[]> {
+  if (gmCache && gmCache.key === key && Date.now() - gmCache.t < 3600e3) return gmCache.list;
+  let list: string[] = [];
+  try {
+    const r = await timed(`https://generativelanguage.googleapis.com/v1beta/models?pageSize=200&key=${key}`, {}, 10000);
+    if (r.ok) {
+      const j: any = await r.json();
+      const ver = (n: string) => parseFloat((n.match(/gemini-(\d+(?:\.\d+)?)/) || [])[1] || '0');
+      list = (j.models || [])
+        .filter((m: any) => (m.supportedGenerationMethods || []).includes('generateContent'))
+        .map((m: any) => String(m.name || '').replace('models/', ''))
+        .filter((n: string) => /^gemini-[\d.]+-flash/.test(n) && !/(image|tts|live|audio|embedding|exp|thinking|robotics|computer)/.test(n))
+        .sort((a: string, b: string) => (ver(b) - ver(a)) || (/lite/.test(a) ? 1 : 0) - (/lite/.test(b) ? 1 : 0) || (/preview/.test(a) ? 1 : 0) - (/preview/.test(b) ? 1 : 0));
+      list = list.slice(0, 4);
+      console.log('gemini models:', list.join(','));
+    }
+  } catch (e: any) { console.warn('gemini model list failed', e?.message); }
+  if (!list.length) list = ['gemini-2.5-flash', 'gemini-2.5-flash-lite'];
+  gmCache = { t: Date.now(), key, list };
+  return list;
+}
+
 async function viaGemini(req: any, key: string, model: string): Promise<string> {
   const { contents, config = {} } = req;
   const list = typeof contents === 'string'
@@ -135,7 +160,7 @@ async function generate(req: any): Promise<string> {
   };
   let text = '';
   for (const key of geminiKeys()) {
-    for (const model of ['gemini-2.5-flash', 'gemini-2.5-flash-lite']) {
+    for (const model of await geminiModels(key)) {
       text = await attempt(() => viaGemini(req, key, model));
       if (text) break;
     }
@@ -189,7 +214,7 @@ export async function geminiHealth(): Promise<string> {
   if (gh && Date.now() - gh.t < 5 * 60e3) return gh.v;
   let v = 'error';
   try {
-    const r = await timed(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${keys[0]}`,
+    const r = await timed(`https://generativelanguage.googleapis.com/v1beta/models/${(await geminiModels(keys[0]))[0]}:generateContent?key=${keys[0]}`,
       { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: 'hi' }] }] }) }, 15000);
     if (r.ok) v = 'ok';
     else { const j: any = await r.json().catch(() => ({})); v = `http ${r.status} ${String(j?.error?.status || '')} ${String(j?.error?.message || '').replace(/key[^ ]*/gi, '').slice(0, 120)}`; }
