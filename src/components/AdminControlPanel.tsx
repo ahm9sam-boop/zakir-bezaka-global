@@ -113,7 +113,15 @@ export const AdminControlPanel: React.FC<AdminControlPanelProps> = ({
     }
   };
 
+  const [inbox, setInbox] = useState<{ id: string; name: string; phone: string; subject: string; message: string; createdAt: string; read: boolean }[]>([]);
+  const loadInbox = async () => {
+    try { const r = await fetch('/api/admin/messages'); if (r.ok) { const d = await r.json(); setInbox(d.messages || []); } } catch {}
+  };
+  const readMsg = async (id: string) => { await fetch('/api/admin/messages/' + id + '/read', { method: 'POST' }).catch(() => {}); loadInbox(); };
+  const delMsg = async (id: string) => { await fetch('/api/admin/messages/' + id, { method: 'DELETE' }).catch(() => {}); loadInbox(); };
+
   const fetchOverview = async () => {
+    loadInbox();
     setIsLoading(true);
     setErrorBanner(null);
     try {
@@ -280,7 +288,7 @@ export const AdminControlPanel: React.FC<AdminControlPanelProps> = ({
 
   const handleChangePasscode = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newPasscode.length < 4) return;
+    if (newPasscode.length < 6) return;
 
     try {
       const res = await fetch('/api/admin/settings', {
@@ -290,6 +298,7 @@ export const AdminControlPanel: React.FC<AdminControlPanelProps> = ({
       });
 
       if (res.ok) {
+        try { const d = await res.json(); if (d?.token) localStorage.setItem('zakir_admin_token', String(d.token)); } catch {}
         setPasscodeSuccess(true);
         setTimeout(() => {
           setPasscodeSuccess(false);
@@ -532,6 +541,33 @@ export const AdminControlPanel: React.FC<AdminControlPanelProps> = ({
             ))}
           </div>
         </div>
+      </div>
+
+      {/* Support messages inbox */}
+      <div className="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 sm:p-6 space-y-3" dir="rtl">
+        <h3 className="font-black text-slate-900 dark:text-white text-base">
+          رسائل الدعم ({inbox.filter((m) => !m.read).length} جديدة)
+        </h3>
+        {inbox.length === 0 ? (
+          <p className="text-xs text-slate-500">مفيش رسائل لسه.</p>
+        ) : (
+          <div className="space-y-2 max-h-96 overflow-y-auto">
+            {inbox.map((m) => (
+              <div key={m.id} className={`p-3 rounded-2xl border text-xs space-y-1 ${m.read ? 'border-slate-200 dark:border-slate-800' : 'border-emerald-500/50 bg-emerald-500/5'}`}>
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <b className="text-slate-900 dark:text-white">{m.name || 'بدون اسم'}{m.phone ? ' · ' + m.phone : ''}</b>
+                  <span className="text-slate-500">{new Date(m.createdAt).toLocaleString('ar-EG')}</span>
+                </div>
+                <div className="text-slate-500">{m.subject}</div>
+                <p className="text-slate-800 dark:text-slate-200 whitespace-pre-wrap">{m.message}</p>
+                <div className="flex gap-2 pt-1">
+                  {!m.read && <button type="button" onClick={() => readMsg(m.id)} className="px-2.5 py-1 rounded-lg bg-emerald-500 text-slate-950 font-bold cursor-pointer">تمت القراءة</button>}
+                  <button type="button" onClick={() => delMsg(m.id)} className="px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-600 font-bold cursor-pointer">حذف</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Students List */}
@@ -930,9 +966,11 @@ export const AdminControlPanel: React.FC<AdminControlPanelProps> = ({
               <div className="space-y-1.5">
                 <label className="text-slate-700 dark:text-slate-300 font-bold">{t.admin.newPinLabel}</label>
                 <input
-                  type="text"
+                  type="password"
+                  autoComplete="new-password"
+                  name="admin-new-passcode"
                   required
-                  minLength={4}
+                  minLength={6}
                   value={newPasscode}
                   onChange={(e) => setNewPasscode(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:outline-none focus:border-amber-500 font-mono text-center text-base"
