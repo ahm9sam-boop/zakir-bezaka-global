@@ -207,8 +207,44 @@ class StudentStore {
   }
 
   public getSettings(): AdminSettings {
-    if (process.env.ADMIN_PASSCODE && process.env.ADMIN_PASSCODE.length >= 6) return { ...this.data.settings, adminPasscode: process.env.ADMIN_PASSCODE };
-    return { ...this.data.settings };
+    const { adminPasscode: _legacy, adminPassHash: _h, ...rest } = this.data.settings as any;
+    return { ...rest, adminPasscode: '' };
+  }
+
+  /** True when an admin code exists (a saved hash, the server env code or an old saved code). */
+  public hasAdminPasscode(): boolean {
+    const s: any = this.data.settings;
+    return Boolean(s.adminPassHash || (process.env.ADMIN_PASSCODE && process.env.ADMIN_PASSCODE.length >= 6) || (s.adminPasscode && s.adminPasscode.length >= 6));
+  }
+
+  /** Checks the admin code. A code saved from the admin panel (hashed) wins over the server env one. */
+  public verifyAdmin(p: string): boolean {
+    const s: any = this.data.settings;
+    if (s.adminPassHash) return checkPass(s.adminPassHash, p);
+    const env = process.env.ADMIN_PASSCODE || '';
+    if (env.length >= 6) {
+      const a = Buffer.from(env), b = Buffer.from(p);
+      return a.length === b.length && crypto.timingSafeEqual(a, b);
+    }
+    const old = String(s.adminPasscode || '');
+    if (old.length >= 6) {
+      const a = Buffer.from(old), b = Buffer.from(p);
+      return a.length === b.length && crypto.timingSafeEqual(a, b);
+    }
+    return false;
+  }
+
+  /** Part of the admin session token: changing the code signs every old admin session out. */
+  public adminSeal(): string {
+    const s: any = this.data.settings;
+    return String(s.adminPassHash || '');
+  }
+
+  public setAdminPasscode(p: string) {
+    const s: any = this.data.settings;
+    s.adminPassHash = hashPass(p);
+    s.adminPasscode = '';
+    this.touch('settings');
   }
 
   public updateSettings(newSettings: Partial<AdminSettings>): AdminSettings {
