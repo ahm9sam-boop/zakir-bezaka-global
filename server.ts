@@ -1168,6 +1168,8 @@ async function setupServer() {
     });
     app.use(vite.middlewares);
   } else {
+    // Hashed build files never change, so browsers and the free Cloudflare edge in front of Render can keep them for a year.
+    app.use('/assets', express.static(path.resolve(__dirname, 'dist', 'assets'), { maxAge: '365d', immutable: true }));
     app.use(express.static(path.resolve(__dirname, 'dist')));
     app.get('*', (_req, res) => {
       res.sendFile(path.resolve(__dirname, 'dist', 'index.html'));
