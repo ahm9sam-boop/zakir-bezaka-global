@@ -31,17 +31,42 @@ async function readDocx(f: File): Promise<string> {
   throw new Error('docx');
 }
 
+async function ocrBlob(blob: Blob): Promise<string> {
+  const b64: string = await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(',')[1] || ''); fr.onerror = () => rej(new Error('read')); fr.readAsDataURL(blob); });
+  const r = await fetch('/api/ocr', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ imageBase64: b64, mimeType: blob.type || 'image/jpeg' }) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || 'تعذر قراءة النص من الصورة');
+  return j.text || '';
+}
+
+async function shrinkImage(f: Blob, maxSide = 1800): Promise<Blob> {
+  const bmp = await createImageBitmap(f);
+  const k = Math.min(1, maxSide / Math.max(bmp.width, bmp.height));
+  const c = document.createElement('canvas'); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+  c.getContext('2d')!.drawImage(bmp, 0, 0, c.width, c.height);
+  return await new Promise((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error('img'))), 'image/jpeg', 0.85));
+}
+
 async function readPdf(f: File): Promise<string> {
-  const lib = (window as any).pdfjsLib; if (!lib) throw new Error('pdf');
+  const lib = (window as any).pdfjsLib; if (!lib) throw new Error('قارئ الـ PDF لسه بيتحمل. جرب تاني بعد ثواني.');
   const doc = await lib.getDocument({ data: new Uint8Array(await f.arrayBuffer()) }).promise;
   let out = '';
   for (let i = 1; i <= Math.min(doc.numPages, 200); i++) { const pg = await doc.getPage(i); const c = await pg.getTextContent(); out += c.items.map((x: any) => x.str).join(' ') + '\n'; }
-  return out;
+  if (out.replace(/\s/g, '').length > 30) return out;
+  // Scanned PDF: read the first pages as images
+  let ocr = '';
+  for (let i = 1; i <= Math.min(doc.numPages, 10); i++) {
+    const pg = await doc.getPage(i); const vp = pg.getViewport({ scale: 1.6 });
+    const c = document.createElement('canvas'); c.width = vp.width; c.height = vp.height;
+    await pg.render({ canvasContext: c.getContext('2d')!, viewport: vp }).promise;
+    const blob: Blob = await new Promise((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error('img'))), 'image/jpeg', 0.8));
+    ocr += (await ocrBlob(blob)) + '\n';
+  }
+  return ocr;
 }
 
 async function readImage(f: File): Promise<string> {
-  if (!(window as any).Tesseract) await new Promise<void>((res, rej) => { const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'; s.onload = () => res(); s.onerror = () => rej(new Error('ocr')); document.head.appendChild(s); });
-  return (await (window as any).Tesseract.recognize(f, 'ara+eng')).data.text;
+  return await ocrBlob(await shrinkImage(f));
 }
 
 async function readMedia(f: File, lang: string): Promise<string> {
@@ -51,7 +76,8 @@ async function readMedia(f: File, lang: string): Promise<string> {
   if (!s.ok) throw new Error(s.j.error || 'x');
   for (;;) {
     await new Promise(r => setTimeout(r, 3000));
-    const st = await post('/api/transcribe-status/' + s.j.jobId);
+    const st = await post('/api/transcribe-status/' + s.j.jobId).catch(() => null);
+    if (!st) continue;
     if (!st.ok || st.j.status === 'error') throw new Error(st.j.error || 'x');
     if (st.j.status === 'done') return st.j.result.transcription;
   }
@@ -73,9 +99,9 @@ export const FileImport: React.FC<{ onText: (t: string) => void; className?: str
       else if (n.endsWith('.pdf')) text = await readPdf(f);
       else if (n.endsWith('.docx')) text = await readDocx(f);
       else text = await f.text();
-      if (!text.trim()) throw new Error('empty');
+      if (!text.trim()) throw new Error('مفيش نص واضح في الملف ده');
       onText(text.trim());
-    } catch (e: any) { setErr(`${t.fail}${e?.message && e.message.length < 80 ? ': ' + e.message : ''}`); }
+    } catch (e: any) { setErr(`${t.fail}${e?.message && e.message.length < 120 ? ': ' + e.message : ''}`); }
     finally { setBusy(false); if (ref.current) ref.current.value = ''; }
   };
   return (
