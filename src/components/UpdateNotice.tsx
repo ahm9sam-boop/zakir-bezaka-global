@@ -17,7 +17,7 @@ export const UpdateNotice: React.FC = () => {
   return (
     <div className="fixed bottom-20 inset-x-3 z-50 rounded-2xl bg-teal-500 text-slate-950 p-3 flex items-center justify-between gap-3 text-sm font-bold shadow-xl">
       <span>{lang === 'ar' ? `يوجد تحديث جديد (${info.version})` : `New version available (${info.version})`}</span>
-      <a href={info.url} target="_blank" rel="noreferrer" className="px-3 py-1.5 rounded-xl bg-slate-950 text-white text-xs">{lang === 'ar' ? 'تحديث' : 'Update'}</a>
+      <a href="https://ahm9sam-boop.github.io/apps-store/" target="_blank" rel="noreferrer" className="px-3 py-1.5 rounded-xl bg-slate-950 text-white text-xs">{lang === 'ar' ? 'تحديث' : 'Update'}</a>
     </div>
   );
 };
