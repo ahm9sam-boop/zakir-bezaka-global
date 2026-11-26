@@ -3,6 +3,7 @@ import os from 'os';
 import path from 'path';
 import { spawn } from 'child_process';
 import ffmpegPath from 'ffmpeg-static';
+import { geminiKeys, geminiModels } from '../../ai';
 
 export type Job = { id: string; status: 'processing' | 'done' | 'error'; progress: number; stage: string; result?: any; error?: string; created: number; note?: string };
 export const jobs = new Map<string, Job>();
@@ -19,6 +20,36 @@ const run = (args: string[]) => new Promise<void>((resolve, reject) => {
 export async function toChunks(input: string, dir: string, segSec = 600): Promise<string[]> {
   await run(['-y', '-i', input, '-vn', '-ac', '1', '-ar', '16000', '-b:a', '32k', '-f', 'segment', '-segment_time', String(segSec), '-reset_timestamps', '1', path.join(dir, 'c%04d.mp3')]);
   return fs.readdirSync(dir).filter(f => /^c\d+\.mp3$/.test(f)).sort().map(f => path.join(dir, f));
+}
+
+
+// Gemini first (best quality), Groq Whisper stays as the fallback.
+let geminiSkipUntil = 0;
+async function geminiTranscribe(file: string, lang: string | undefined, prev: string | undefined): Promise<string> {
+  if (Date.now() < geminiSkipUntil) throw new Error('gemini paused');
+  const keys = geminiKeys();
+  if (!keys.length) throw new Error('no gemini key');
+  const b64 = fs.readFileSync(file).toString('base64');
+  const prompt = `Transcribe this lecture audio word for word in the language that is spoken${lang ? ` (expected language code: ${lang})` : ''}. Keep Arabic dialect words as spoken. Output only the transcript text, no comments, no timestamps.${prev ? ' The previous part ended with: ' + prev.slice(-150) : ''}`;
+  let last = '';
+  for (const key of keys) {
+    for (const model of (await geminiModels(key)).slice(0, 2)) {
+      try {
+        const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }, { inline_data: { mime_type: 'audio/mp3', data: b64 } }] }], generationConfig: { temperature: 0 } }),
+          signal: AbortSignal.timeout(90000),
+        });
+        if (!r.ok) { last = `gemini ${model} ${r.status}`; continue; }
+        const j: any = await r.json();
+        const t = (j?.candidates?.[0]?.content?.parts || []).map((p: any) => p.text || '').join('').trim();
+        if (t) return t;
+        last = 'gemini empty';
+      } catch (e: any) { last = 'gemini ' + (e?.message || 'error'); }
+    }
+  }
+  geminiSkipUntil = Date.now() + 3 * 60e3;
+  throw new Error(last || 'gemini failed');
 }
 
 async function whisper(file: string, key: string, lang: string | undefined, prompt: string | undefined, job?: Job): Promise<string> {
@@ -60,16 +91,20 @@ export async function transcribeJob(job: Job, buf: Buffer | string, ext: string,
     const chunks = await toChunks(input, out);
     if (!chunks.length) throw new Error('No audio track found');
     const parts: string[] = [];
+    let usedGemini = 0, usedWhisper = 0;
     for (let i = 0; i < chunks.length; i++) {
       job.stage = 'transcribe'; job.progress = 10 + Math.round((i / chunks.length) * 75);
-      parts.push((await whisper(chunks[i], opts.key, opts.lang, parts[parts.length - 1], job)).trim());
+      let piece = '';
+      try { piece = (await geminiTranscribe(chunks[i], opts.lang, parts[parts.length - 1])).trim(); usedGemini++; }
+      catch (e: any) { console.warn('gemini transcribe fallback:', e?.message); piece = (await whisper(chunks[i], opts.key, opts.lang, parts[parts.length - 1], job)).trim(); usedWhisper++; }
+      parts.push(piece);
     }
     const transcription = parts.filter(Boolean).join('\n\n');
     if (transcription.length < 5) throw new Error('No speech recognized in audio');
     job.stage = 'summarize'; job.progress = 90;
     let s = { summary: '', keyPoints: [] as string[] };
     try { s = await opts.summarize(transcription); } catch (e) { console.warn('summary failed', (e as any)?.message); }
-    job.result = { title: opts.title, transcription, summary: s.summary, keyPoints: s.keyPoints, isAiGenerated: true, engine: 'Whisper large-v3-turbo', durationEstimate: `${chunks.length * 10} min max` };
+    job.result = { title: opts.title, transcription, summary: s.summary, keyPoints: s.keyPoints, isAiGenerated: true, engine: usedGemini && usedWhisper ? 'Gemini + Whisper' : usedGemini ? 'Gemini' : 'Whisper large-v3-turbo', durationEstimate: `${chunks.length * 10} min max` };
     job.status = 'done'; job.progress = 100;
   } catch (e: any) {
     job.status = 'error'; job.error = String(e?.message || e).slice(0, 300);
