@@ -537,7 +537,7 @@ export interface TranslationSchema {
     adminPinPlaceholder: string;
     adminLoginBtn: string;
     checkingBtn: string;
-    continueGuest: string;
+    backToSignIn: string;
     aboutLink: string;
     welcomeSuccess: string;
     registerSuccess: string;
