@@ -280,7 +280,7 @@ app.post('/api/chat', async (req, res) => {
     const prof = profile && typeof profile === 'object'
       ? `\nStudent profile: level = ${String(profile.level || '').slice(0, 40)}; subjects = ${String(profile.subjects || '').slice(0, 120)}. Adapt depth and examples to this level.` : '';
     const systemPrompt = `You are the smart academic tutor inside the "Zakir Smart" study platform.
-CRITICAL REQUIREMENT: Always respond strictly and exclusively in ${langMeta.name}.
+CRITICAL REQUIREMENT: Respond in ${langMeta.name}, unless the student's latest message is clearly written in another language, in which case answer in the student's own language.
 Rules:
 - Explain complex concepts step by step with clear, practical examples.
 - Use clean bullet points and numbered steps when helpful.
