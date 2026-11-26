@@ -20,16 +20,17 @@ jobs:
       - name: Install
         run: |
           npm install --legacy-peer-deps
-          npm install --save --legacy-peer-deps @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7 @capacitor/local-notifications@7
+          npm install --save --legacy-peer-deps @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7 @capacitor/local-notifications@7 @capacitor/share@7 @capacitor/filesystem@7
       - name: Build web
         run: npm run build
       - name: Add Android
         run: |
           npx cap add android
           npx cap sync android
-          grep -q LocalNotifications android/app/src/main/assets/capacitor.plugins.json || (echo 'LocalNotifications plugin missing' && exit 1)
+          grep -q LocalNotifications android/app/src/main/assets/capacitor.plugins.json && grep -q Share android/app/src/main/assets/capacitor.plugins.json || (echo 'LocalNotifications plugin missing' && exit 1)
           M=android/app/src/main/AndroidManifest.xml
-          for P in POST_NOTIFICATIONS SCHEDULE_EXACT_ALARM RECEIVE_BOOT_COMPLETED VIBRATE; do grep -q "android.permission.$P" $M || sed -i "s#<application#<uses-permission android:name=\"android.permission.$P\" />\n    <application#" $M; done
+          for P in POST_NOTIFICATIONS SCHEDULE_EXACT_ALARM RECEIVE_BOOT_COMPLETED VIBRATE INTERNET ACCESS_NETWORK_STATE RECORD_AUDIO MODIFY_AUDIO_SETTINGS READ_MEDIA_AUDIO READ_MEDIA_VIDEO READ_MEDIA_IMAGES WAKE_LOCK; do grep -q "android.permission.$P" $M || sed -i "s#<application#<uses-permission android:name=\"android.permission.$P\" />\n    <application#" $M; done
+          grep -q READ_EXTERNAL_STORAGE $M || sed -i 's#<application#<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />\n    <application#' $M
           rm -rf android/app/src/main/res/mipmap-anydpi-v26
           for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
             cp public/pwa-192x192.png android/app/src/main/res/mipmap-$d/ic_launcher.png
