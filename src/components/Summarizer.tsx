@@ -95,6 +95,20 @@ export const Summarizer: React.FC<SummarizerProps> = ({
     }
   };
 
+  const [speaking, setSpeaking] = useState(false);
+  const toggleSpeak = () => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    if (speaking) { window.speechSynthesis.cancel(); setSpeaking(false); return; }
+    const u = new SpeechSynthesisUtterance(buildFullText());
+    const map: Record<string, string> = { ar: 'ar-EG', en: 'en-US', fr: 'fr-FR', de: 'de-DE', es: 'es-ES', pt: 'pt-BR', ru: 'ru-RU', tr: 'tr-TR', hi: 'hi-IN', id: 'id-ID' };
+    u.lang = map[lang] || lang;
+    u.onend = () => setSpeaking(false);
+    u.onerror = () => setSpeaking(false);
+    setSpeaking(true);
+    window.speechSynthesis.speak(u);
+  };
+  useEffect(() => () => { if (typeof window !== 'undefined' && 'speechSynthesis' in window) window.speechSynthesis.cancel(); }, []);
+
   const buildFullText = () => {
     if (!result) return '';
     return `${result.title}\n\n${t.summarizer.overviewTitle}:\n${result.overview}\n\n${t.summarizer.pointsTitle}:\n${result.mainPoints.map((p, i) => `${i + 1}. ${p}`).join('\n')}\n\n${t.summarizer.defsTitle}:\n${result.definitions.map((d) => `• ${d.term}: ${d.definition}`).join('\n')}\n\n${t.summarizer.tipsTitle}:\n${result.examTips.map((tip) => `* ${tip}`).join('\n')}`;
@@ -335,6 +349,10 @@ export const Summarizer: React.FC<SummarizerProps> = ({
 
               <button type="button" onClick={handleDownloadTxt} className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs border border-slate-200 dark:border-slate-700 transition cursor-pointer">TXT</button>
               <button type="button" onClick={handleDownloadPdf} className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs border border-slate-200 dark:border-slate-700 transition cursor-pointer">PDF</button>
+
+              <button type="button" onClick={toggleSpeak} className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs border border-slate-200 dark:border-slate-700 transition cursor-pointer">
+                {speaking ? (lang === 'ar' ? '⏹ إيقاف القراءة' : '⏹ Stop') : (lang === 'ar' ? '🔊 استمع للملخص' : '🔊 Listen')}
+              </button>
 
               <button
                 type="button"
