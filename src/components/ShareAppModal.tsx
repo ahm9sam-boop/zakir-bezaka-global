@@ -28,7 +28,7 @@ export const ShareApp: React.FC<ShareAppProps> = ({ onClose, isModal = false }) 
   const [isStandalone, setIsStandalone] = useState(false);
   const [showManualInfo, setShowManualInfo] = useState(false);
 
-  const currentUrl = typeof window !== 'undefined' ? window.location.origin : 'https://zakir.app';
+  const currentUrl = 'https://ahm9sam-boop.github.io/apps-store/';
 
   useEffect(() => {
     if (
