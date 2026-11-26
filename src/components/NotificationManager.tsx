@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { AppNotification } from '../types';
 import { safeStorageGet, safeStorageSet } from '../utils/storage';
-import { enableNativeReminders, getLN, REMINDER_POOL } from '../utils/reminders';
+import { enableNativeReminders, getLN, testNotificationNow, REMINDER_POOL } from '../utils/reminders';
 import { useLanguage } from '../contexts/LanguageContext';
 
 export const NotificationManager: React.FC = () => {
@@ -255,6 +255,13 @@ export const NotificationManager: React.FC = () => {
               </div>
             </div>
 
+            <button
+              type="button"
+              onClick={async () => setNotice(await testNotificationNow())}
+              className="w-full py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 text-xs font-bold border border-emerald-500/30 cursor-pointer"
+            >
+              جرّب إشعار الآن
+            </button>
             {notice && (
               <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />
