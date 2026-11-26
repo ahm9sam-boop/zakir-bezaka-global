@@ -9,6 +9,7 @@ import { fileURLToPath } from 'url';
 import os from 'os';
 import crypto from 'crypto';
 import { studentStore } from './src/server/studentStore';
+import { ipLimit, quota, aiQueue, aiCache, queueStats } from './src/server/guard';
 
 dotenv.config();
 
@@ -16,6 +17,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+app.set('trust proxy', 1);
 const port = parseInt(process.env.PORT || '3000', 10);
 const isProd = process.env.NODE_ENV === 'production';
 
@@ -127,7 +129,7 @@ const TOKEN_SECRET = crypto.createHash('sha256').update('zk-v1|' + (process.env.
 const sig = (v: string) => crypto.createHmac('sha256', TOKEN_SECRET).update(v).digest('hex').slice(0, 40);
 const studentToken = (phone: string) => 's.' + Buffer.from(phone).toString('base64url') + '.' + sig('s|' + phone);
 const adminToken = () => 'a.' + sig('admin');
-const withToken = (st: any) => (st && st.phone ? { ...st, token: studentToken(String(st.phone)) } : st);
+const withToken = (st: any) => { if (!(st && st.phone)) return st; const { passcode: _pc, ...rest } = st; return { ...rest, token: studentToken(String(st.phone)) }; };
 const safeEq = (a: string, b: string) => a.length === b.length && crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
 function authLevel(req: express.Request): 'admin' | 'student' | null {
   const h = String(req.headers.authorization || '');
@@ -152,6 +154,29 @@ app.use('/api', (req, res, next) => {
   return res.status(401).json({ error: 'Please sign in first.' });
 });
 
+// ---- Load protection: login throttling, per-student daily quotas, queue and cache for AI routes.
+const phoneOf = (req: express.Request): any => {
+  const h = String(req.headers.authorization || '');
+  const m = h.startsWith('Bearer s.') ? h.slice(9).match(/^([A-Za-z0-9_-]+)\./) : null;
+  if (!m) return null;
+  try { return studentStore.findStudentByPhone(Buffer.from(m[1], 'base64url').toString()) || null; } catch { return null; }
+};
+const mark = (st: any) => studentStore.markDirty(st);
+const statKey: Record<string, any> = { summarize: 'summaries', quiz: 'quizzes', flashcards: 'flashcards' };
+app.use('/api/auth/student-login', ipLimit('login', 12, 60e3, 'محاولات كتير. استنى دقيقة وجرب تاني.'));
+app.use('/api/auth/student-register', ipLimit('register', 10, 10 * 60e3, 'محاولات تسجيل كتير. استنى شوية وجرب تاني.'));
+app.use('/api/auth/admin-login', ipLimit('admin', 8, 10 * 60e3, 'Too many attempts.'));
+for (const k of ['chat', 'summarize', 'quiz', 'flashcards', 'mindmap']) {
+  const mw: any[] = [ipLimit('ai', 90, 60e3, 'طلبات كتير في وقت قصير. استنى شوية.')];
+  if (k !== 'chat') mw.push(aiCache(k, (req) => { const st = phoneOf(req); if (st && statKey[k]) studentStore.incrementStat(st.phone, statKey[k]); }));
+  mw.push(quota(k, phoneOf, mark), aiQueue());
+  app.post('/api/' + k, ...mw);
+}
+app.post('/api/transcribe-start', ipLimit('ai', 90, 60e3, 'طلبات كتير في وقت قصير.'), quota('transcribe', phoneOf, mark));
+app.post('/api/transcribe', ipLimit('ai', 90, 60e3, 'طلبات كتير في وقت قصير.'), quota('transcribe', phoneOf, mark), aiQueue());
+app.post('/api/transcribe-file', ipLimit('ai', 90, 60e3, 'طلبات كتير في وقت قصير.'), quota('transcribe', phoneOf, mark));
+app.post('/api/youtube', ipLimit('ai', 90, 60e3, 'طلبات كتير في وقت قصير.'), quota('youtube', phoneOf, mark));
+
 app.get('/api/status', (_req, res) => {
   const apiKey = process.env.GEMINI_API_KEY;
   const isKeyConfigured = true;
@@ -163,6 +188,7 @@ app.get('/api/status', (_req, res) => {
     transcribeModel: isKeyConfigured ? 'ai' : 'unavailable',
     version: '2.0.0',
     supportedLanguages: Object.keys(SUPPORTED_LANGUAGES),
+    load: queueStats(),
   });
 });
 
@@ -844,13 +870,19 @@ app.post('/api/auth/student-register', (req, res) => {
       return res.status(400).json({ error: 'Passcode must be at least 3 characters.' });
     }
 
-    const { student, isNew } = studentStore.registerStudent(
+    const { student, isNew, conflict } = studentStore.registerStudent(
       name,
       phone,
       passcode,
       googleAccount
     );
 
+    if (conflict) {
+      return res.status(409).json({
+        success: false,
+        error: 'رقم الهاتف ده مسجل قبل كده. سجّل دخول بالرقم السري بتاعك بدل إنشاء حساب جديد.',
+      });
+    }
     if (student.status === 'blocked') {
       return res.status(403).json({
         success: false,
@@ -919,9 +951,14 @@ app.get('/api/auth/student-check', (req, res) => {
   if (!phone) {
     return res.status(400).json({ error: 'Phone required' });
   }
+  const hdr = String(req.headers.authorization || '');
+  const tok = hdr.startsWith('Bearer ') ? hdr.slice(7).trim() : '';
   const student = studentStore.findStudentByPhone(phone);
   if (!student) {
     return res.status(404).json({ error: 'Student not found' });
+  }
+  if (!tok || !safeEq(tok, studentToken(String(student.phone)))) {
+    return res.status(401).json({ error: 'Sign in again.' });
   }
   return res.json({ student: withToken(student), status: student.status });
 });
@@ -1070,6 +1107,7 @@ app.get('/api/admin/student/:id/activities', (req, res) => {
 
 // Setup Vite middleware or static serving
 async function setupServer() {
+  await studentStore.ready;
   app.use(express.static(path.resolve(__dirname, 'public')));
 
   if (!isProd) {
@@ -1091,3 +1129,7 @@ async function setupServer() {
 }
 
 setupServer();
+
+const shutdown = async () => { try { await studentStore.flush(); } catch {} process.exit(0); };
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
