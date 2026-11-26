@@ -37,6 +37,7 @@ export interface ChatMessage {
   timestamp: string;
   source?: string;
   isLiveAi?: boolean;
+  sources?: { n: number; text: string }[];
 }
 
 export interface SummaryResult {
@@ -139,6 +140,7 @@ export interface Student {
   name: string;
   phone: string;
   passcode?: string;
+  passhash?: string;
   googleAccount?: string;
   status: 'active' | 'pending' | 'blocked';
   registeredAt: string;
