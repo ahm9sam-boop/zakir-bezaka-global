@@ -1119,8 +1119,8 @@ app.post('/api/admin/settings', (req, res) => {
     updates.autoApprove = autoApprove;
   }
   if (newPasscode !== undefined) {
-    if (typeof newPasscode !== 'string' || newPasscode.trim().length < 6) {
-      return res.status(400).json({ error: 'Admin code must be at least 6 characters.' });
+    if (typeof newPasscode !== 'string' || newPasscode.trim().length < 4) {
+      return res.status(400).json({ error: 'Admin code must be at least 4 characters.' });
     }
     studentStore.setAdminPasscode(newPasscode.trim());
   }
