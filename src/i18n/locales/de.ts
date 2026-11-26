@@ -34,7 +34,7 @@ export const de: TranslationSchema = {
     brandPart2: 'Smart',
     brandTag: 'KI',
     brandSub: 'Deine globale KI-Lernplattform',
-    aiOnline: 'Gemini 4 Flash & 3.5 Transcribe Bereit',
+    aiOnline: 'AI Ready',
     aiOffline: 'KI-Verbindung nicht verfügbar',
     menuLabel: 'Hauptmenü',
     toolsHeader: 'Lernwerkzeuge',
@@ -121,7 +121,7 @@ export const de: TranslationSchema = {
   assistant: {
     title: 'KI-Lerntutor',
     subtitle: 'Stelle Fragen und erhalte Schritt-für-Schritt-Erklärungen in deiner Sprache',
-    liveEngine: 'Gemini 4 Flash',
+    liveEngine: 'AI',
     attachContext: 'Lernstoff anhängen',
     contextAttached: 'Kontext angehängt',
     clearChat: 'Leeren',
@@ -234,7 +234,7 @@ export const de: TranslationSchema = {
   transcription: {
     title: 'KI-Vorlesungstranskription',
     subtitle: 'Nimm direkt per Mikrofon auf, lade Audio (MP3, M4A, WAV bis 100 MB) hoch oder nutze Live-Diktat.',
-    engineBadge: 'Gemini 3.5 Transcribe',
+    engineBadge: 'AI Transcribe',
     micTitle: 'Mit Mikrofon aufnehmen',
     micStart: 'Klicken zum Starten',
     micStop: 'Aufnahme läuft... klicken zum Stoppen',
