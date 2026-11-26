@@ -129,7 +129,8 @@ const TOKEN_SECRET = crypto.createHash('sha256').update('zk-v1|' + (process.env.
 const sig = (v: string) => crypto.createHmac('sha256', TOKEN_SECRET).update(v).digest('hex').slice(0, 40);
 const studentToken = (phone: string) => 's.' + Buffer.from(phone).toString('base64url') + '.' + sig('s|' + phone);
 const adminToken = () => 'a.' + sig('admin');
-const withToken = (st: any) => { if (!(st && st.phone)) return st; const { passcode: _pc, ...rest } = st; return { ...rest, token: studentToken(String(st.phone)) }; };
+const pubStudent = (x: any) => { if (!x) return x; const { passcode: _a, passhash: _b, ...r } = x; return r; };
+const withToken = (st: any) => { if (!(st && st.phone)) return st; const { passcode: _pc, passhash: _ph, ...rest } = st; return { ...rest, token: studentToken(String(st.phone)) }; };
 const safeEq = (a: string, b: string) => a.length === b.length && crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
 function authLevel(req: express.Request): 'admin' | 'student' | null {
   const h = String(req.headers.authorization || '');
@@ -193,6 +194,38 @@ app.get('/api/status', (_req, res) => {
 });
 
 // 2. Chat API
+
+// Speaker labels: estimated from the wording of the transcript (Whisper does not separate voices).
+app.post('/api/speakers', ipLimit('ai', 30, 60e3, 'طلبات كتير. استنى شوية.'), aiQueue(), async (req, res) => {
+  const text = String((req.body || {}).text || '');
+  if (text.trim().length < 20) return res.status(400).json({ error: 'No text.' });
+  if (text.length > 48000) return res.status(413).json({ error: 'Text is too long to label (max 48000 characters).' });
+  const ai = getGeminiClient();
+  if (!ai) return res.status(503).json({ error: 'AI unavailable' });
+  try {
+    const chunks: string[] = [];
+    let rest = text;
+    while (rest.length > 0) {
+      if (rest.length <= 6000) { chunks.push(rest); break; }
+      let cut = Math.max(rest.lastIndexOf('\n', 6000), rest.lastIndexOf('. ', 6000), rest.lastIndexOf('؟ ', 6000));
+      if (cut < 2000) cut = 6000;
+      chunks.push(rest.slice(0, cut + 1)); rest = rest.slice(cut + 1);
+    }
+    const outs: string[] = [];
+    for (let i = 0; i < chunks.length; i++) {
+      const prompt = `Below is part ${i + 1} of ${chunks.length} of a speech-to-text transcript. Split it into turns and put a speaker label at the start of each turn, like "المتحدث 1:" / "المتحدث 2:" (use the transcript's language; if only one person seems to talk, use a single label). Decide changes of speaker only from the wording (questions and answers, greetings, thanks, direct address). Keep speaker numbering consistent with the previous part. Do NOT change, add, remove or fix any words. Output only the labeled transcript.${i > 0 ? '\nLast labeled text so far: ' + outs[i - 1].slice(-300) : ''}\n\nTranscript part:\n"""${chunks[i]}"""`;
+      const response: any = await ai.models.generateContent({ model: TEXT_MODEL, contents: prompt });
+      const out = String(response?.text || '').trim();
+      if (!out) throw new Error('empty');
+      outs.push(out);
+    }
+    return res.json({ text: outs.join('\n\n') });
+  } catch (e: any) {
+    console.error('speakers error:', e?.message || e);
+    return res.status(502).json({ error: 'AI failed' });
+  }
+});
+
 app.get('/ads.txt', (_req, res) => {
   const pub = String(process.env.ADSENSE_CLIENT || '').replace(/^ca-/, '');
   res.type('text/plain').send(/^pub-\d+$/.test(pub) ? `google.com, ${pub}, DIRECT, f08c47fec0942fa0\n` : '');
@@ -220,7 +253,7 @@ app.post('/api/youtube', async (req, res) => {
 });
 
 app.post('/api/chat', async (req, res) => {
-  const { messages, studyContext, language, studentPhone } = req.body || {};
+  const { messages, studyContext, language, studentPhone, profile } = req.body || {};
   const { code: langCode, meta: langMeta } = resolveLang(language);
 
   if (!messages || !Array.isArray(messages) || messages.length === 0) {
@@ -233,13 +266,26 @@ app.post('/api/chat', async (req, res) => {
   }
 
   try {
+    // Split the student's material into numbered passages so answers can cite real passages.
+    const ctxText = studyContext ? String(studyContext).slice(0, 20000) : '';
+    const passages: string[] = [];
+    if (ctxText) {
+      let cur = '';
+      for (const para of ctxText.split(/\n{1,}/)) {
+        if ((cur + ' ' + para).length > 700 && cur) { passages.push(cur.trim()); cur = para; } else cur += (cur ? ' ' : '') + para;
+      }
+      if (cur.trim()) passages.push(cur.trim());
+    }
+    const numbered = passages.slice(0, 40).map((p, i) => `[${i + 1}] ${p}`).join('\n\n');
+    const prof = profile && typeof profile === 'object'
+      ? `\nStudent profile: level = ${String(profile.level || '').slice(0, 40)}; subjects = ${String(profile.subjects || '').slice(0, 120)}. Adapt depth and examples to this level.` : '';
     const systemPrompt = `You are the smart academic tutor inside the "Zakir Smart" study platform.
 CRITICAL REQUIREMENT: Always respond strictly and exclusively in ${langMeta.name}.
 Rules:
 - Explain complex concepts step by step with clear, practical examples.
 - Use clean bullet points and numbered steps when helpful.
-- Encourage active recall and critical thinking.
-${studyContext ? `\nStudent's attached study material context:\n"""${String(studyContext).slice(0, 20000)}"""\nGround your answers in this context whenever relevant.` : ''}`;
+- Encourage active recall and critical thinking.${prof}
+${numbered ? `\nStudent's study material, split into numbered passages:\n"""${numbered}"""\nGround your answers in these passages. Whenever a statement comes from a passage, add its number in square brackets like [2] right after the statement. Never invent a passage number. If the answer is not in the material, say so clearly and then answer from general knowledge without any bracket numbers.` : ''}`;
 
     // Ensure conversation starts with a user turn and alternates cleanly
     const rawMapped = messages
@@ -298,8 +344,13 @@ ${studyContext ? `\nStudent's attached study material context:\n"""${String(stud
       });
     }
 
+    const cited = Array.from(new Set<number>((reply.match(/\[(\d{1,2})\]/g) || []).map((m: string) => Number(m.slice(1, -1)))))
+      .filter((n: number) => n >= 1 && n <= passages.length)
+      .slice(0, 6)
+      .map((n: number) => ({ n, text: passages[n - 1].slice(0, 400) }));
     return res.json({
       reply,
+      sources: cited,
       source: 'AI Tutor',
       isLiveAi: true,
     });
@@ -976,7 +1027,7 @@ app.post('/api/auth/admin-login', (req, res) => {
 });
 
 app.get('/api/admin/overview', (_req, res) => {
-  const students = studentStore.getStudents();
+  const students = studentStore.getStudents().map((x: any) => { const { passcode: _a, passhash: _b, ...r } = x; return r; });
   const settings = studentStore.getSettings();
 
   const total = students.length;
@@ -1004,7 +1055,7 @@ app.post('/api/admin/student/status', (req, res) => {
   if (!updated) {
     return res.status(404).json({ error: 'Student not found' });
   }
-  return res.json({ success: true, student: updated });
+  return res.json({ success: true, student: pubStudent(updated) });
 });
 
 app.post('/api/admin/student/:id/passcode', (req, res) => {
@@ -1017,7 +1068,7 @@ app.post('/api/admin/student/:id/passcode', (req, res) => {
   if (!updated) {
     return res.status(404).json({ error: 'Student not found' });
   }
-  return res.json({ success: true, student: updated });
+  return res.json({ success: true, student: pubStudent(updated) });
 });
 
 app.post('/api/admin/student/create', (req, res) => {
@@ -1026,7 +1077,7 @@ app.post('/api/admin/student/create', (req, res) => {
     return res.status(400).json({ error: 'Name and phone are required' });
   }
   const student = studentStore.addStudentDirectly(name, phone, passcode, status, notes);
-  return res.json({ success: true, student });
+  return res.json({ success: true, student: pubStudent(student) });
 });
 
 app.delete('/api/admin/student/:id', (req, res) => {
