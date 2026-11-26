@@ -312,6 +312,24 @@ export const LectureTranscription: React.FC<LectureTranscriptionProps> = ({
     }
   };
 
+  const [labeling, setLabeling] = useState(false);
+  const [labelErr, setLabelErr] = useState('');
+  const handleLabelSpeakers = async () => {
+    if (!transcriptResult || labeling) return;
+    setLabeling(true);
+    setLabelErr('');
+    try {
+      const r = await fetch('/api/speakers', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: transcriptResult.transcription, language: lang }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.text) throw new Error(j.error || 'failed');
+      setTranscriptResult({ ...transcriptResult, transcription: j.text });
+    } catch (e: any) {
+      setLabelErr(lang === 'ar' ? 'معرفتش أحدد المتحدثين دلوقتي. جرب تاني.' : 'Could not label speakers now. Try again.');
+    } finally {
+      setLabeling(false);
+    }
+  };
+
   const handleCopy = () => {
     if (!transcriptResult) return;
     navigator.clipboard.writeText(transcriptResult.transcription);
@@ -665,6 +683,13 @@ export const LectureTranscription: React.FC<LectureTranscriptionProps> = ({
               <FileText className="w-4 h-4 text-amber-500" />
               <span>{t.transcription.fullTextTitle}</span>
             </h4>
+            <div className="flex flex-wrap items-center gap-2 text-[11px]">
+              <button type="button" onClick={handleLabelSpeakers} disabled={labeling} className="px-3 py-1.5 rounded-xl bg-amber-500 text-slate-950 font-bold disabled:opacity-50 cursor-pointer">
+                {labeling ? (lang === 'ar' ? 'جاري التحديد...' : 'Labeling...') : (lang === 'ar' ? 'حدد المتحدثين' : 'Label speakers')}
+              </button>
+              <span className="text-slate-500 dark:text-slate-400">{lang === 'ar' ? 'تقدير من سياق الكلام (مش من تحليل الصوت)، فممكن يغلط.' : 'Estimated from the wording, not from the voice, so it can be wrong.'}</span>
+              {labelErr && <span className="text-rose-600">{labelErr}</span>}
+            </div>
             <div className="p-6 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-sm text-slate-800 dark:text-slate-200 leading-loose whitespace-pre-wrap max-h-[500px] overflow-y-auto">
               {transcriptResult.transcription}
             </div>
