@@ -34,7 +34,7 @@ export const hi: TranslationSchema = {
     brandPart2: 'Smart',
     brandTag: 'AI',
     brandSub: 'आपका वैश्विक स्मार्ट अध्ययन प्लेटफॉर्म',
-    aiOnline: 'Gemini 4 Flash और 3.5 Transcribe तैयार हैं',
+    aiOnline: 'AI Ready',
     aiOffline: 'AI कनेक्शन अनुपलब्ध है',
     menuLabel: 'मुख्य मेनू',
     toolsHeader: 'अध्ययन उपकरण',
@@ -121,7 +121,7 @@ export const hi: TranslationSchema = {
   assistant: {
     title: 'AI अध्ययन ट्यूटर',
     subtitle: 'प्रश्न पूछें और अपनी भाषा में चरण-दर-चरण स्पष्टीकरण प्राप्त करें',
-    liveEngine: 'Gemini 4 Flash',
+    liveEngine: 'AI',
     attachContext: 'अध्ययन सामग्री जोड़ें',
     contextAttached: 'संदर्भ जुड़ा है',
     clearChat: 'चैट साफ़ करें',
@@ -234,7 +234,7 @@ export const hi: TranslationSchema = {
   transcription: {
     title: 'AI लेक्चर ट्रांसक्रिप्शन',
     subtitle: 'माइक्रोफ़ोन से रिकॉर्ड करें, ऑडियो अपलोड करें (MP3, M4A, WAV 100 MB तक) या लाइव डिक्टेशन चलाएँ।',
-    engineBadge: 'Gemini 3.5 Transcribe',
+    engineBadge: 'AI Transcribe',
     micTitle: 'माइक्रोफ़ोन से रिकॉर्ड करें',
     micStart: 'रिकॉर्डिंग शुरू करने के लिए दबाएँ',
     micStop: 'रिकॉर्ड हो रहा है... रोकने के लिए दबाएँ',
