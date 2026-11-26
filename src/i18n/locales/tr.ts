@@ -710,7 +710,7 @@ export const tr: TranslationSchema = {
     adminPinPlaceholder: 'Yönetici PIN kodunu girin...',
     adminLoginBtn: 'Yönetici Panelini Aç',
     checkingBtn: 'Doğrulanıyor...',
-    continueGuest: 'Misafir Olarak Keşfet',
+    backToSignIn: 'Girişe dön',
     aboutLink: 'Hakkında ve Gizlilik Politikası',
     welcomeSuccess: 'Tekrar hoş geldin, {name}! Giriliyor...',
     registerSuccess: 'Hesap oluşturuldu! Platform açılıyor...',
