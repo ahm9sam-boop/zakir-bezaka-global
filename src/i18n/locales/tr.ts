@@ -34,7 +34,7 @@ export const tr: TranslationSchema = {
     brandPart2: 'Smart',
     brandTag: 'YZ',
     brandSub: 'Küresel Akıllı Ders Platformunuz',
-    aiOnline: 'Gemini 4 Flash ve 3.5 Transcribe Hazır',
+    aiOnline: 'AI Ready',
     aiOffline: 'YZ Bağlantısı Kullanılamıyor',
     menuLabel: 'Ana Menü',
     toolsHeader: 'Çalışma Araçları',
@@ -121,7 +121,7 @@ export const tr: TranslationSchema = {
   assistant: {
     title: 'YZ Ders Öğretmeni',
     subtitle: 'Sorular sorun, kendi dilinizde adım adım açıklamalar alın',
-    liveEngine: 'Gemini 4 Flash',
+    liveEngine: 'AI',
     attachContext: 'Ders Metni Ekle',
     contextAttached: 'Bağlam Eklendi',
     clearChat: 'Temizle',
@@ -234,7 +234,7 @@ export const tr: TranslationSchema = {
   transcription: {
     title: 'YZ Ders Ses Dökümü',
     subtitle: 'Dersi mikrofonla kaydedin, ses yükleyin (MP3, M4A, WAV 100 MB’a kadar) veya canlı dikte kullanın.',
-    engineBadge: 'Gemini 3.5 Transcribe',
+    engineBadge: 'AI Transcribe',
     micTitle: 'Mikrofon ile Kaydet',
     micStart: 'Kaydı başlatmak için tıklayın',
     micStop: 'Kaydediliyor... durdurmak için tıklayın',
