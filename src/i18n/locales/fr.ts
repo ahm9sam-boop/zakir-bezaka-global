@@ -710,7 +710,7 @@ export const fr: TranslationSchema = {
     adminPinPlaceholder: 'Entrez le PIN Admin...',
     adminLoginBtn: 'Ouvrir le Panneau Admin',
     checkingBtn: 'Vérification...',
-    continueGuest: 'Explorer en Invité',
+    backToSignIn: 'Retour à la connexion',
     aboutLink: 'À propos & Confidentialité',
     welcomeSuccess: 'Bon retour, {name} ! Ouverture...',
     registerSuccess: 'Compte créé ! Lancement de la plateforme...',
