@@ -8,6 +8,6 @@
     "cleartext": false
   },
   "android": {
-    "appendUserAgent": "ZakirApp/1.0.0"
+    "appendUserAgent": "ZakirApp/1.1.1"
   }
 }
