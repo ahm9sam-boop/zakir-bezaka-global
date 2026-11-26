@@ -1,6 +1,6 @@
 import express from 'express';
 import { createServer as createViteServer } from 'vite';
-import { getAi } from './ai';
+import { getAi, geminiHealth } from './ai';
 import { jobs, transcribeJob, Job } from './src/server/transcribe';
 import dotenv from 'dotenv';
 import fs from 'fs';
@@ -179,14 +179,14 @@ app.post('/api/transcribe', ipLimit('ai', 90, 60e3, 'طلبات كتير في و
 app.post('/api/transcribe-file', ipLimit('ai', 90, 60e3, 'طلبات كتير في وقت قصير.'), quota('transcribe', phoneOf, mark));
 app.post('/api/youtube', ipLimit('ai', 90, 60e3, 'طلبات كتير في وقت قصير.'), quota('youtube', phoneOf, mark));
 
-app.get('/api/status', (_req, res) => {
+app.get('/api/status', async (_req, res) => {
   const providers = { gemini: !!process.env.GEMINI_API_KEY, groq: !!process.env.GROQ_API_KEY, huggingface: !!process.env.HF_API_KEY, openrouter: !!process.env.OPENROUTER_API_KEY, fallback: 'pollinations' };
   const isKeyConfigured = true; // AI answers always have at least the free fallback
   res.json({
     status: 'online',
     appName: 'Zakir Smart / ذاكر بذكاء',
     hasGeminiKey: isKeyConfigured,
-    providers,
+    providers: { ...providers, geminiCheck: await geminiHealth() },
     model: isKeyConfigured ? 'ai' : 'unavailable',
     transcribeModel: isKeyConfigured ? 'ai' : 'unavailable',
     version: '2.0.0',
