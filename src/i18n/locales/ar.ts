@@ -34,7 +34,7 @@ export const ar: TranslationSchema = {
     brandPart2: 'بذكاء',
     brandTag: 'ذكاء اصطناعي',
     brandSub: 'منصتك التعليمية الذكية العالمية',
-    aiOnline: 'Gemini 4 Flash & 3.5 Transcribe مفعّل',
+    aiOnline: 'الذكاء الاصطناعي مفعّل',
     aiOffline: 'اتصال الذكاء غير متاح',
     menuLabel: 'القائمة الرئيسية',
     toolsHeader: 'أدوات المنصة',
@@ -121,7 +121,7 @@ export const ar: TranslationSchema = {
   assistant: {
     title: 'المساعد الدراسي الذكي',
     subtitle: 'اسأل وسيقوم الذكاء الاصطناعي بشرح وتبسيط وتحليل المادة الدراسية',
-    liveEngine: 'Gemini 4 Flash',
+    liveEngine: 'AI',
     attachContext: 'إرفاق نص المادة',
     contextAttached: 'سياق المادة (مرفق)',
     clearChat: 'مسح المحادثة',
@@ -234,7 +234,7 @@ export const ar: TranslationSchema = {
   transcription: {
     title: 'تفريغ المحاضرات والتسجيلات الصوتية بالذكاء الاصطناعي',
     subtitle: 'سجل شرح الأستاذ في القاعة، أو ارفع ملف المحاضرة (MP3, M4A, WAV حتى 100 ميجابايت) لتحويله لنص منظم مع ملخص ونقاط الامتحان.',
-    engineBadge: 'Gemini 3.5 Transcribe',
+    engineBadge: 'AI Transcribe',
     micTitle: 'تسجيل صوتي من الميكروفون',
     micStart: 'اضغط للتسجيل أثناء المحاضرة',
     micStop: 'جارٍ التسجيل... اضغط للإيقاف',
