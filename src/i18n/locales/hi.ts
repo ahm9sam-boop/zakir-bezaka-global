@@ -710,7 +710,7 @@ export const hi: TranslationSchema = {
     adminPinPlaceholder: 'एडमिन पिन दर्ज करें...',
     adminLoginBtn: 'एडमिन कंट्रोल पैनल खोलें',
     checkingBtn: 'जाँच हो रही है...',
-    continueGuest: 'अतिथि के रूप में देखें',
+    backToSignIn: 'साइन इन पर वापस जाएँ',
     aboutLink: 'परिचय और गोपनीयता नीति',
     welcomeSuccess: 'पुनः स्वागत है, {name}!',
     registerSuccess: 'खाता बन गया! प्लेटफॉर्म खुल रहा है...',
