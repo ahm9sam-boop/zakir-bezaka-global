@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { AppNotification } from '../types';
 import { safeStorageGet, safeStorageSet } from '../utils/storage';
+import { enableNativeReminders, getLN, REMINDER_POOL } from '../utils/reminders';
 import { useLanguage } from '../contexts/LanguageContext';
 
 export const NotificationManager: React.FC = () => {
@@ -54,6 +55,14 @@ export const NotificationManager: React.FC = () => {
   useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
       setPermission(Notification.permission);
+    }
+    // Native app: ask once at start and (re)schedule 14 days of varied reminders
+    if (getLN()) {
+      const asked = safeStorageGet<boolean>('zakir_native_asked', false);
+      enableNativeReminders(!asked).then((ok) => {
+        safeStorageSet('zakir_native_asked', true);
+        if (ok) setPermission('granted');
+      });
     }
   }, []);
 
@@ -129,6 +138,12 @@ export const NotificationManager: React.FC = () => {
 
   const requestPermission = async () => {
     setNotice(null);
+    if (getLN()) {
+      const ok = await enableNativeReminders(true);
+      setPermission(ok ? 'granted' : 'denied');
+      if (!ok) setNotice('فعّل الإشعارات للتطبيق من إعدادات الهاتف');
+      return;
+    }
     if (typeof window === 'undefined' || !('Notification' in window)) {
       setNotice(t.notifications.unsupportedNotice);
       return;
@@ -146,6 +161,11 @@ export const NotificationManager: React.FC = () => {
   };
 
   const handleTriggerMotivation = () => {
+    if (langMeta.code === 'ar') {
+      const r = REMINDER_POOL[Math.floor(Math.random() * REMINDER_POOL.length)];
+      sendPushNotification(r.t, r.b);
+      return;
+    }
     const list = t.notifications.alerts;
     const randomItem = list[Math.floor(Math.random() * list.length)];
     sendPushNotification(randomItem.title, randomItem.message);
