@@ -61,7 +61,12 @@ async function viaOpenAI(url: string, key: string | null, model: string, msgs: M
   if (json) body.response_format = { type: 'json_object' };
   const headers: any = { 'Content-Type': 'application/json' };
   if (key) headers.Authorization = `Bearer ${key}`;
-  const r = await timed(url, { method: 'POST', headers, body: JSON.stringify(body) }, ms);
+  let r = await timed(url, { method: 'POST', headers, body: JSON.stringify(body) }, ms);
+  if (!r.ok && json && r.status === 400) {
+    // json_object mode rejects prompts that ask for a JSON array: retry as plain text, the server extracts the JSON.
+    delete body.response_format;
+    r = await timed(url, { method: 'POST', headers, body: JSON.stringify(body) }, ms);
+  }
   if (!r.ok) throw new Error(`${model} ${r.status}`);
   const j: any = await r.json();
   const text = j?.choices?.[0]?.message?.content || '';
@@ -111,7 +116,12 @@ async function generate(req: any): Promise<string> {
   }
   if (!text && !hasAudio) {
     const groq = process.env.GROQ_API_KEY;
-    if (groq) text = await attempt(() => viaOpenAI('https://api.groq.com/openai/v1/chat/completions', groq, 'llama-3.3-70b-versatile', full, json));
+    if (groq) {
+      for (const gm of ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant']) {
+        text = await attempt(() => viaOpenAI('https://api.groq.com/openai/v1/chat/completions', groq, gm, full, json));
+        if (text) break;
+      }
+    }
     const or = process.env.OPENROUTER_API_KEY;
     if (!text && or) text = await attempt(() => viaOpenAI('https://openrouter.ai/api/v1/chat/completions', or, 'meta-llama/llama-3.3-70b-instruct:free', full, json));
     if (!text) text = await attempt(() => viaPollinations(full, json));
