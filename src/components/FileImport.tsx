@@ -1,3 +1,4 @@
+import { uploadFile } from '../utils/uploadChunks';
 import React, { useRef, useState } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -44,9 +45,9 @@ async function readImage(f: File): Promise<string> {
 }
 
 async function readMedia(f: File, lang: string): Promise<string> {
-  const b64: string = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1]); r.onerror = rej; r.readAsDataURL(f); });
-  const post = async (u: string, body?: any) => { const r = await fetch(u, body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : undefined); return { ok: r.ok, j: await r.json().catch(() => ({})) }; };
-  const s = await post('/api/transcribe-start', { audioBase64: b64, fileName: f.name, mimeType: f.type, title: f.name, language: lang });
+  const post = async (u: string, body?: any) => { const r = await fetch(u, body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : undefined); return { ok: r.ok, status: r.status, j: await r.json().catch(() => ({})) }; };
+  const id = await uploadFile(f);
+  const s = await post('/api/transcribe-file', { uploadId: id, title: f.name, language: lang });
   if (!s.ok) throw new Error(s.j.error || 'x');
   for (;;) {
     await new Promise(r => setTimeout(r, 3000));
@@ -63,7 +64,7 @@ export const FileImport: React.FC<{ onText: (t: string) => void; className?: str
   const [busy, setBusy] = useState(false); const [err, setErr] = useState('');
   const go = async (f?: File | null) => {
     if (!f) return; setErr('');
-    if (f.size > 90 * 1024 * 1024) { setErr(t.big); return; }
+    if (f.size > 2 * 1024 * 1024 * 1024) { setErr(t.big); return; }
     setBusy(true);
     try {
       const n = f.name.toLowerCase(); let text = '';
