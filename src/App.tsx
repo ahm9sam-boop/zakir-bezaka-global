@@ -218,9 +218,15 @@ export default function App() {
     setIsAdmin(false);
     safeStorageSet('zakir_current_student', null);
     safeStorageSet('zakir_is_admin', false);
+    try { localStorage.removeItem('zakir_admin_token'); } catch {}
     safeStorageSet('zakir_auth_dismissed', false);
     setShowAuthModal(true);
   };
+
+  useEffect(() => {
+    if (isAdmin && !localStorage.getItem('zakir_admin_token')) handleLogout();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdmin]);
 
   const handleDismissAuth = () => {
     safeStorageSet('zakir_auth_dismissed', true);
