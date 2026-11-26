@@ -34,7 +34,7 @@ export const es: TranslationSchema = {
     brandPart2: 'Smart',
     brandTag: 'IA',
     brandSub: 'Tu Plataforma Global de Estudio Inteligente',
-    aiOnline: 'Gemini 4 Flash y 3.5 Transcribe Listos',
+    aiOnline: 'AI Ready',
     aiOffline: 'Conexión IA no disponible',
     menuLabel: 'Menú Principal',
     toolsHeader: 'Herramientas de Estudio',
@@ -121,7 +121,7 @@ export const es: TranslationSchema = {
   assistant: {
     title: 'Tutor de Estudio IA',
     subtitle: 'Haz preguntas y recibe explicaciones paso a paso en tu idioma',
-    liveEngine: 'Gemini 4 Flash',
+    liveEngine: 'AI',
     attachContext: 'Adjuntar Texto',
     contextAttached: 'Contexto Adjunto',
     clearChat: 'Limpiar',
@@ -234,7 +234,7 @@ export const es: TranslationSchema = {
   transcription: {
     title: 'Transcripción de Clases con IA',
     subtitle: 'Graba tu clase, sube un audio (MP3, M4A, WAV hasta 100 MB) o usa dictado en vivo.',
-    engineBadge: 'Gemini 3.5 Transcribe',
+    engineBadge: 'AI Transcribe',
     micTitle: 'Grabar con Micrófono',
     micStart: 'Pulsa para grabar',
     micStop: 'Grabando... pulsa para detener',
