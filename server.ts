@@ -134,6 +134,10 @@ app.get('/api/status', (_req, res) => {
 });
 
 // 2. Chat API
+app.get('/ads.txt', (_req, res) => {
+  const pub = String(process.env.ADSENSE_CLIENT || '').replace(/^ca-/, '');
+  res.type('text/plain').send(/^pub-\d+$/.test(pub) ? `google.com, ${pub}, DIRECT, f08c47fec0942fa0\n` : '');
+});
 app.get('/api/ads-config', (_req, res) => res.json({ client: process.env.ADSENSE_CLIENT || '', slot: process.env.ADSENSE_SLOT || '' }));
 
 app.post('/api/youtube', async (req, res) => {
