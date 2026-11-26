@@ -64,7 +64,7 @@ async function geminiModels(key: string): Promise<string[]> {
   return list;
 }
 
-async function viaGemini(req: any, key: string, model: string): Promise<string> {
+async function viaGemini(req: any, key: string, model: string, ms = 40000): Promise<string> {
   const { contents, config = {} } = req;
   const list = typeof contents === 'string'
     ? [{ role: 'user', parts: [{ text: contents }] }]
@@ -73,7 +73,7 @@ async function viaGemini(req: any, key: string, model: string): Promise<string> 
   if (config.systemInstruction) body.systemInstruction = { parts: [{ text: config.systemInstruction }] };
   if (config.responseMimeType) body.generationConfig.responseMimeType = config.responseMimeType;
   const r = await timed(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
-    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, 40000);
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, ms);
   if (!r.ok) throw new Error(`gemini ${model} ${r.status}`);
   const j: any = await r.json();
   const text = j?.candidates?.[0]?.content?.parts?.map((p: any) => p.text || '').join('') || '';
@@ -161,7 +161,7 @@ async function generate(req: any): Promise<string> {
   let text = '';
   for (const key of geminiKeys()) {
     for (const model of await geminiModels(key)) {
-      text = await attempt(() => viaGemini(req, key, model));
+      text = await attempt(() => viaGemini(req, key, model, 20000));
       if (text) break;
     }
     if (text) break;
@@ -212,18 +212,18 @@ export async function geminiHealth(): Promise<string> {
   const keys = geminiKeys();
   if (!keys.length) return 'no key';
   if (gh && Date.now() - gh.t < 2 * 60e3) return gh.v;
-  let v = 'error';
-  let models: string[] = [];
-  try {
-    models = await geminiModels(keys[0]);
-    const model = models[0];
+  const models = await geminiModels(keys[0]);
+  const res = await Promise.all(models.map(async (m) => {
     const t0 = Date.now();
-    const r = await timed(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${keys[0]}`,
-      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: 'hi' }] }] }) }, 25000);
-    if (r.ok) v = `ok ${model} ${Date.now() - t0}ms`;
-    else { const j: any = await r.json().catch(() => ({})); v = `http ${r.status} ${model} ${String(j?.error?.status || '')} ${String(j?.error?.message || '').replace(/key[^ ]*/gi, '').slice(0, 120)}`; }
-    v += ' | models: ' + models.join(',');
-  } catch (e: any) { v = 'network ' + (e?.message || '') + ' | models: ' + models.join(','); }
+    try {
+      const r = await timed(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${keys[0]}`,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: 'hi' }] }] }) }, 20000);
+      if (r.ok) return `${m}: ok ${Date.now() - t0}ms`;
+      const j: any = await r.json().catch(() => ({}));
+      return `${m}: http ${r.status} ${String(j?.error?.status || '')}`;
+    } catch (e: any) { return `${m}: ${e?.message || 'error'} ${Date.now() - t0}ms`; }
+  }));
+  const v = res.join(' | ');
   gh = { t: Date.now(), v };
   return v;
 }
