@@ -1,4 +1,5 @@
 import fs from 'fs';
+import crypto from 'crypto';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { Student, AdminSettings, StudentActivityEntry } from '../types';
@@ -22,6 +23,24 @@ const DEFAULT_SETTINGS: AdminSettings = {
 };
 
 const SEED_STUDENTS: Student[] = [];
+
+function hashPass(p: string): string {
+  const salt = crypto.randomBytes(16).toString('hex');
+  return 'scrypt$' + salt + '$' + crypto.scryptSync(p, salt, 32).toString('hex');
+}
+function checkPass(stored: string, p: string): boolean {
+  const parts = String(stored || '').split('$');
+  if (parts.length !== 3 || parts[0] !== 'scrypt') return false;
+  const a = Buffer.from(parts[2], 'hex');
+  const b = crypto.scryptSync(p, parts[1], 32);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+/** Student's access code is stored only as a salted hash. Old plain codes are converted here. */
+function migrateStudent(s: any): boolean {
+  if (s && s.passcode && !s.passhash) { s.passhash = hashPass(String(s.passcode)); delete s.passcode; return true; }
+  if (s && s.passcode && s.passhash) { delete s.passcode; return true; }
+  return false;
+}
 
 class StudentStore {
   private data: StoreData = {
@@ -53,6 +72,8 @@ class StudentStore {
     const rows = await dbQuery('SELECT data FROM zk_students');
     if (rows.rows.length > 0) {
       this.data.students = rows.rows.map((r: any) => r.data as Student);
+      for (const st of this.data.students) if (migrateStudent(st)) this.dirty.add(st);
+      if (this.dirty.size) this.scheduleFlush();
       const st = await dbQuery("SELECT v FROM zk_kv WHERE k='settings'");
       if (st.rows[0]) this.data.settings = { ...DEFAULT_SETTINGS, ...st.rows[0].v };
       this.reindex();
@@ -139,10 +160,7 @@ class StudentStore {
 
           let modified = false;
           this.data.students.forEach((s) => {
-            if (!s.passcode) {
-              s.passcode = '1234';
-              modified = true;
-            }
+            if (migrateStudent(s)) modified = true;
             if (typeof s.totalTimeMinutes !== 'number') {
               s.totalTimeMinutes = Math.floor(Math.random() * 40) + 15;
               modified = true;
@@ -265,14 +283,14 @@ class StudentStore {
 
     if (existing) {
       // Someone else must not be able to take over an existing account by registering with its phone number.
-      if (existing.passcode && existing.passcode !== cleanPasscode) {
+      if (existing.passhash && !checkPass(existing.passhash, cleanPasscode)) {
         return { student: existing, isNew: false, conflict: true };
       }
       existing.lastLoginAt = now;
       if (cleanName && cleanName.length >= 2) {
         existing.name = cleanName;
       }
-      existing.passcode = cleanPasscode;
+      if (!existing.passhash) existing.passhash = hashPass(cleanPasscode);
       if (cleanGoogle) existing.googleAccount = cleanGoogle;
       if (existing.status !== 'blocked') {
         existing.status = 'active';
@@ -292,7 +310,7 @@ class StudentStore {
       id: `std_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       name: cleanName,
       phone: cleanPhone,
-      passcode: cleanPasscode,
+      passhash: hashPass(cleanPasscode),
       googleAccount: cleanGoogle,
       status: this.data.settings.autoApprove ? 'active' : 'pending',
       registeredAt: now,
@@ -337,15 +355,15 @@ class StudentStore {
 
     const cleanPasscode = passcode.trim();
     // Verify passcode
-    if (student.passcode && student.passcode !== cleanPasscode) {
+    if (student.passhash && !checkPass(student.passhash, cleanPasscode)) {
       return {
         success: false,
         error: 'الرقم السري غير صحيح. يُرجى التأكد وإعادة المحاولة.',
       };
     }
 
-    if (!student.passcode) {
-      student.passcode = cleanPasscode;
+    if (!student.passhash) {
+      student.passhash = hashPass(cleanPasscode);
     }
 
     if (student.status === 'blocked') {
@@ -427,7 +445,8 @@ class StudentStore {
     const student = this.data.students.find((s) => s.id === id);
     if (!student) return null;
 
-    student.passcode = newPasscode.trim();
+    student.passhash = hashPass(newPasscode.trim());
+    delete (student as any).passcode;
     this.logStudentActivity(student.phone, {
       type: 'action',
       title: 'تعديل الرقم السري',
@@ -473,7 +492,7 @@ class StudentStore {
       id: existingIndex >= 0 ? this.data.students[existingIndex].id : `std_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       name: cleanName,
       phone: cleanPhone,
-      passcode: cleanPasscode,
+      passhash: hashPass(cleanPasscode),
       status,
       registeredAt: existingIndex >= 0 ? this.data.students[existingIndex].registeredAt : new Date().toISOString(),
       lastLoginAt: new Date().toISOString(),
