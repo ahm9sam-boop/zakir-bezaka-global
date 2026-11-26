@@ -142,15 +142,30 @@ async function generate(req: any): Promise<string> {
     if (text) break;
   }
   if (!text && !hasAudio) {
-    const groq = process.env.GROQ_API_KEY;
-    if (groq) {
+    for (const groq of (process.env.GROQ_API_KEY || '').split(',').map((x) => x.trim()).filter(Boolean)) {
       for (const gm of await groqModels(groq)) {
         text = await attempt(() => viaOpenAI('https://api.groq.com/openai/v1/chat/completions', groq, gm, full, json));
         if (text) break;
       }
+      if (text) break;
     }
-    const or = process.env.OPENROUTER_API_KEY;
-    if (!text && or) text = await attempt(() => viaOpenAI('https://openrouter.ai/api/v1/chat/completions', or, 'meta-llama/llama-3.3-70b-instruct:free', full, json));
+    const keys = (n: string) => (process.env[n] || '').split(',').map((x) => x.trim()).filter(Boolean);
+    const extra: [string, string[], string[]][] = [
+      ['https://api.cerebras.ai/v1/chat/completions', keys('CEREBRAS_API_KEY'), ['llama-3.3-70b', 'llama3.1-8b']],
+      ['https://api.mistral.ai/v1/chat/completions', keys('MISTRAL_API_KEY'), ['mistral-small-latest', 'open-mistral-nemo']],
+      ['https://router.huggingface.co/v1/chat/completions', keys('HF_API_KEY'), ['meta-llama/Llama-3.3-70B-Instruct', 'Qwen/Qwen2.5-72B-Instruct']],
+      ['https://openrouter.ai/api/v1/chat/completions', keys('OPENROUTER_API_KEY'), ['meta-llama/llama-3.3-70b-instruct:free', 'google/gemma-3-27b-it:free', 'mistralai/mistral-small-3.2-24b-instruct:free', 'deepseek/deepseek-chat-v3-0324:free']],
+    ];
+    for (const [url, ks, models] of extra) {
+      for (const k of ks) {
+        for (const m of models) {
+          if (text) break;
+          text = await attempt(() => viaOpenAI(url, k, m, full, json, 30000));
+        }
+        if (text) break;
+      }
+      if (text) break;
+    }
     if (!text) text = await attempt(() => viaPollinations(full, json));
   }
   if (!text) throw new Error('All AI providers failed: ' + errors.join(' | '));
