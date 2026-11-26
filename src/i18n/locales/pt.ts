@@ -853,7 +853,7 @@ export const pt: TranslationSchema = {
     emptyMsg: 'Sem notificações ainda.',
     welcomeTitle: 'Bem-vindo ao Zakir Smart! 🎓',
     welcomeMsg: 'Seus lembretes inteligentes estão prontos.',
-    updateTitle: '🚀 10 Idiomas e Gemini 4 Ativos',
+    updateTitle: '🚀 10 Idiomas',
     updateMsg: 'Aproveite modos Claro/Escuro, 10 idiomas e resumos IA velozes!',
     alerts: [
       { title: '💡 Revisão Rápida', message: 'Revise 5 flashcards agora para fortalecer a memória!' },
