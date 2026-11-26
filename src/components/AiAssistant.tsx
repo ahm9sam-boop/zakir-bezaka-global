@@ -111,6 +111,7 @@ export const AiAssistant: React.FC<AiAssistantProps> = ({
           messages: nextMessages,
           studyContext: studyContext.trim() || undefined,
           language: lang,
+          profile: safeStorageGet<any>('zakir_profile', null) || undefined,
         }),
       });
 
@@ -127,6 +128,7 @@ export const AiAssistant: React.FC<AiAssistantProps> = ({
         timestamp: new Date().toLocaleTimeString(langMeta.locale, { hour: '2-digit', minute: '2-digit' }),
         source: data.source === 'gemini-4-hydrogen' ? t.assistant.liveEngine : data.source,
         isLiveAi: data.isLiveAi ?? true,
+        sources: Array.isArray(data.sources) && data.sources.length ? data.sources : undefined,
       };
 
       setMessages((prev) => [...prev, assistantMsg]);
@@ -350,6 +352,17 @@ export const AiAssistant: React.FC<AiAssistantProps> = ({
                 >
                   {msg.content}
                 </div>
+
+                {msg.sources && msg.sources.length > 0 && (
+                  <div className="px-2 space-y-1">
+                    <div className="text-[11px] font-bold text-teal-700 dark:text-teal-400">{lang === 'ar' ? 'المصادر من مادتك:' : 'Sources from your material:'}</div>
+                    {msg.sources.map((s) => (
+                      <div key={s.n} className="text-[11px] text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2 leading-relaxed">
+                        <span className="font-bold text-teal-700 dark:text-teal-400">[{s.n}]</span> {s.text}{s.text.length >= 400 ? '…' : ''}
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 <div className="flex items-center gap-2 px-2 text-[11px] text-slate-500 dark:text-slate-400">
                   <span>{msg.timestamp}</span>
