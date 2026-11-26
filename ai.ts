@@ -145,6 +145,7 @@ async function groqModels(key: string): Promise<string[]> {
   }
 }
 
+let geminiDownUntil = 0;
 async function generate(req: any): Promise<string> {
   const { msgs, hasAudio } = normalize(req.contents);
   const json = req.config?.responseMimeType === 'application/json';
@@ -159,12 +160,17 @@ async function generate(req: any): Promise<string> {
     try { return await fn(); } catch (e: any) { errors.push(e?.message || String(e)); return ''; }
   };
   let text = '';
-  for (const key of geminiKeys()) {
-    for (const model of await geminiModels(key)) {
-      text = await attempt(() => viaGemini(req, key, model, 20000));
+  if (Date.now() > geminiDownUntil) {
+    for (const key of geminiKeys()) {
+      const ms = (await geminiModels(key)).slice(0, 2);
+      for (const model of ms) {
+        text = await attempt(() => viaGemini(req, key, model, 12000));
+        if (text) break;
+      }
       if (text) break;
     }
-    if (text) break;
+    // Gemini failed: skip it for 3 minutes so answers come fast from Groq, then try Gemini again
+    if (!text && geminiKeys().length) geminiDownUntil = Date.now() + 3 * 60e3;
   }
   if (!text && !hasAudio) {
     for (const groq of (process.env.GROQ_API_KEY || '').split(',').map((x) => x.trim()).filter(Boolean)) {
