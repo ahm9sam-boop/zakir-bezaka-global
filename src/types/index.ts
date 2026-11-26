@@ -153,6 +153,7 @@ export interface Student {
 
 export interface AdminSettings {
   adminPasscode: string;
+  adminPassHash?: string;
   autoApprove: boolean;
   requirePhoneVerification: boolean;
 }
