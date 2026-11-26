@@ -147,7 +147,7 @@ app.post('/api/youtube', async (req, res) => {
     if (!m) return res.status(400).json({ error: 'Invalid YouTube link' });
     const page = await (await fetch(`https://www.youtube.com/watch?v=${m[1]}&hl=en`, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36', 'Accept-Language': 'en-US,en;q=0.9', Cookie: 'CONSENT=YES+1' } })).text();
     const mm = page.match(/"captionTracks":(\[.*?\])/);
-    if (!mm) return res.status(404).json({ error: 'No captions available for this video. Paste the text instead.' });
+    if (!mm) return res.status(404).json({ error: 'YouTube blocks automatic import from our servers for this video. Open the video, tap Show transcript, copy it and paste it here, or upload the audio file for transcription.' });
     const tracks = JSON.parse(mm[1]);
     const want = String(req.body?.language || 'en');
     const tr = tracks.find((t: any) => t.languageCode?.startsWith(want)) || tracks.find((t: any) => t.languageCode?.startsWith('en')) || tracks[0];
@@ -156,7 +156,7 @@ app.post('/api/youtube', async (req, res) => {
     if (!text) return res.status(404).json({ error: 'Empty transcript' });
     return res.json({ text: text.slice(0, 40000), lang: tr.languageCode });
   } catch (e: any) {
-    return res.status(502).json({ error: 'Could not fetch captions. Paste the text instead.' });
+    return res.status(502).json({ error: 'YouTube blocks automatic import from our servers. Open the video, tap Show transcript, copy it and paste it here, or upload the audio file for transcription.' });
   }
 });
 
