@@ -35,6 +35,7 @@ jobs:
             rm -f android/app/src/main/res/mipmap-$d/ic_launcher_foreground.png
           done
           VER="${{ github.event.inputs.version }}"
+          sed -i "s#ZakirApp/[0-9.]*#ZakirApp/$VER#" capacitor.config.json android/app/src/main/assets/capacitor.config.json 2>/dev/null || true
           CODE=$(echo "$VER" | awk -F. '{print $1*10000+$2*100+$3}')
           sed -i "s/versionCode 1/versionCode $CODE/; s/versionName \"1.0\"/versionName \"$VER\"/" android/app/build.gradle
       - name: Build release APK
