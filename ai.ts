@@ -4,7 +4,7 @@ import crypto from 'crypto';
 
 type Msg = { role: 'system' | 'user' | 'assistant'; content: string };
 
-const geminiKeys = (): string[] =>
+export const geminiKeys = (): string[] =>
   [process.env.GEMINI_API_KEY, ...(process.env.GEMINI_API_KEYS || '').split(',')]
     .map((k) => (k || '').trim())
     .filter((k) => k && k !== 'MY_GEMINI_API_KEY');
@@ -42,7 +42,7 @@ async function timed(url: string, init: any, ms: number) {
 
 // Google retires Gemini model names often: ask Google which flash models this key can use now, newest first.
 let gmCache: { t: number; key: string; list: string[] } | null = null;
-async function geminiModels(key: string): Promise<string[]> {
+export async function geminiModels(key: string): Promise<string[]> {
   if (gmCache && gmCache.key === key && Date.now() - gmCache.t < 3600e3) return gmCache.list;
   let list: string[] = [];
   try {
