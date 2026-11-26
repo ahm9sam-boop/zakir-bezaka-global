@@ -51,7 +51,7 @@ export const FlashcardsView: React.FC<FlashcardsViewProps> = ({
   const [newBack, setNewBack] = useState('');
   const [newCategory, setNewCategory] = useState('');
 
-  const cards = customCards && customCards.length > 0 ? customCards : t.flashcards.sampleCards;
+  const cards: Flashcard[] = customCards && customCards.length > 0 ? customCards : [];
 
   useEffect(() => {
     if (initialText) {
@@ -167,6 +167,21 @@ export const FlashcardsView: React.FC<FlashcardsViewProps> = ({
 
   const masteredTotal = cards.filter((c) => c.mastered).length;
   const progressPercent = cards.length ? Math.round((masteredTotal / cards.length) * 100) : 0;
+
+  const exportDeck = (kind: 'anki' | 'csv') => {
+    if (!cards.length) return;
+    const clean = (x: string) => String(x ?? '').replace(/\r?\n/g, ' ');
+    const body = kind === 'anki'
+      ? cards.map((c) => `${clean(c.front).replace(/\t/g, ' ')}\t${clean(c.back).replace(/\t/g, ' ')}\t${clean(c.category || '').replace(/\t/g, ' ')}`).join('\n')
+      : 'front,back,category\n' + cards.map((c) => [c.front, c.back, c.category || ''].map((v) => '"' + clean(v).replace(/"/g, '""') + '"').join(',')).join('\n');
+    const blob = new Blob(['\ufeff' + body], { type: 'text/plain;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = kind === 'anki' ? 'flashcards-anki.txt' : 'flashcards.csv';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  };
+
   const currentCard = cards[currentIdx];
 
   return (
@@ -197,6 +212,12 @@ export const FlashcardsView: React.FC<FlashcardsViewProps> = ({
             <Plus className="w-4 h-4 text-teal-600 dark:text-teal-400" />
             <span>{t.flashcards.addManualBtn}</span>
           </button>
+          {cards.length > 0 && (
+            <>
+              <button type="button" onClick={() => exportDeck('anki')} className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-semibold border border-slate-200 dark:border-slate-700 cursor-pointer">Anki</button>
+              <button type="button" onClick={() => exportDeck('csv')} className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-semibold border border-slate-200 dark:border-slate-700 cursor-pointer">CSV</button>
+            </>
+          )}
         </div>
       </div>
 
