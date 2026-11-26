@@ -253,6 +253,46 @@ export const LectureTranscription: React.FC<LectureTranscriptionProps> = ({
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  const pollJob = async (jobId: string) => {
+    let fails = 0;
+    for (;;) {
+      await new Promise((r) => setTimeout(r, 3000));
+      let r: Response | null = null;
+      let j: any = {};
+      try {
+        r = await fetch('/api/transcribe-status/' + jobId);
+        j = await r.json().catch(() => ({}));
+      } catch { r = null; }
+      if (!r || r.status >= 500 || r.status === 429) {
+        if (++fails > 60) throw new Error('السيرفر مش بيرد. جرب تاني بعد شوية.');
+        setJobNote('بنحاول نتصل بالسيرفر...');
+        continue;
+      }
+      fails = 0;
+      if (r.status === 404) {
+        try { localStorage.removeItem('zk_tr_job'); } catch { /* ignore */ }
+        throw new Error('السيرفر اتعمله إعادة تشغيل أثناء التفريغ. ارفع الملف واضغط تفريغ تاني.');
+      }
+      if (!r.ok) throw new Error(j.error || t.assistant.errorFallback);
+      setJobPct(Math.max(8, j.progress || 0)); setJobNote(j.note || '');
+      setLoadingStep(j.stage === 'summarize' ? 3 : j.stage === 'transcribe' ? 2 : 1);
+      if (j.status === 'error') { try { localStorage.removeItem('zk_tr_job'); } catch { /* ignore */ } throw new Error(j.error || t.assistant.errorFallback); }
+      if (j.status === 'done') { try { localStorage.removeItem('zk_tr_job'); } catch { /* ignore */ } setTranscriptResult(j.result); return; }
+    }
+  };
+
+  // Resume a running job after the app was closed or reloaded
+  useEffect(() => {
+    let id: string | null = null;
+    try { id = localStorage.getItem('zk_tr_job'); } catch { /* ignore */ }
+    if (!id) return;
+    setIsLoading(true);
+    pollJob(id)
+      .catch((err) => setErrorMessage(err instanceof Error ? err.message : t.assistant.errorFallback))
+      .finally(() => setIsLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleTranscribe = async () => {
     if (isReadingFile) {
       setErrorMessage(t.transcription.readingFileWait);
@@ -296,15 +336,8 @@ export const LectureTranscription: React.FC<LectureTranscriptionProps> = ({
         return;
       }
       if (!start.ok) throw new Error(start.j.error || t.assistant.errorFallback);
-      for (;;) {
-        await new Promise((r) => setTimeout(r, 3000));
-        const st = await post('/api/transcribe-status/' + start.j.jobId);
-        if (!st.ok) throw new Error(st.j.error || t.assistant.errorFallback);
-        setJobPct(Math.max(8, st.j.progress || 0)); setJobNote(st.j.note || '');
-        setLoadingStep(st.j.stage === 'summarize' ? 3 : st.j.stage === 'transcribe' ? 2 : 1);
-        if (st.j.status === 'error') throw new Error(st.j.error || t.assistant.errorFallback);
-        if (st.j.status === 'done') { setTranscriptResult(st.j.result); break; }
-      }
+      try { localStorage.setItem('zk_tr_job', start.j.jobId); } catch { /* ignore */ }
+      await pollJob(start.j.jobId);
     } catch (err: unknown) {
       setErrorMessage(err instanceof Error ? err.message : t.assistant.errorFallback);
     } finally {
