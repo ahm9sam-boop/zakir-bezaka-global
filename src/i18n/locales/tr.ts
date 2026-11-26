@@ -853,7 +853,7 @@ export const tr: TranslationSchema = {
     emptyMsg: 'Henüz bildirim yok.',
     welcomeTitle: 'Zakir Smart’a Hoş Geldiniz! 🎓',
     welcomeMsg: 'Çalışma temponuzu korumak için akıllı hatırlatıcılar hazır.',
-    updateTitle: '🚀 Çoklu Dil ve Gemini 4 Hazır',
+    updateTitle: '🚀 Çoklu Dil',
     updateMsg: '10 dil, Açık/Koyu tema ve hızlı YZ özetlerinin keyfini çıkarın!',
     alerts: [
       { title: '💡 Hızlı Aralıklı Tekrar', message: 'Uzun süreli hafızayı güçlendirmek için 5 kart tekrar edin!' },
