@@ -63,9 +63,12 @@ export default function App() {
   const [hasGeminiKey, setHasGeminiKey] = useState(true);
 
   // Auth states
-  const [currentStudent, setCurrentStudent] = useState<Student | null>(() =>
-    safeStorageGet<Student | null>('zakir_current_student', null)
-  );
+  const [currentStudent, setCurrentStudent] = useState<Student | null>(() => {
+    // A saved session without a sign-in token is an old one: force a fresh login.
+    const st = safeStorageGet<Student | null>('zakir_current_student', null);
+    if (st && !(st as any).token) { safeStorageSet('zakir_current_student', null); return null; }
+    return st;
+  });
   const [isAdmin, setIsAdmin] = useState<boolean>(() =>
     safeStorageGet<boolean>('zakir_is_admin', false)
   );
@@ -121,7 +124,15 @@ export default function App() {
   useEffect(() => {
     if (currentStudent?.phone) {
       fetch(`/api/auth/student-check?phone=${encodeURIComponent(currentStudent.phone)}`)
-        .then((res) => res.json())
+        .then((res) => {
+          if (res.status === 401 || res.status === 404) {
+            setCurrentStudent(null);
+            safeStorageSet('zakir_current_student', null);
+            setShowAuthModal(true);
+            return {} as any;
+          }
+          return res.json();
+        })
         .then((data) => {
           if (data.student) {
             if (data.student.status !== 'active') {
@@ -194,6 +205,11 @@ export default function App() {
   useEffect(() => {
     safeStorageSet('zakir_user_progress', progress);
   }, [progress]);
+
+  // While signed out, only the About page may be viewed.
+  useEffect(() => {
+    if (aboutPeek && !currentStudent && !isAdmin && currentTab !== 'about') setCurrentTab('about');
+  }, [aboutPeek, currentStudent, isAdmin, currentTab]);
 
   const handleStudentLoginSuccess = (student: Student) => {
     setCurrentStudent(student);
