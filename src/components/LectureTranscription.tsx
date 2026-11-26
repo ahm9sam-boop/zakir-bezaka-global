@@ -1,3 +1,4 @@
+import { uploadFile } from '../utils/uploadChunks';
 import React, { useState, useRef, useEffect } from 'react';
 import {
   Mic,
@@ -48,6 +49,8 @@ export const LectureTranscription: React.FC<LectureTranscriptionProps> = ({
 
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [audioBase64, setAudioBase64] = useState<string | null>(null);
+  const [audioFileObj, setAudioFileObj] = useState<File | null>(null);
+  const [jobNote, setJobNote] = useState('');
   const [audioFileName, setAudioFileName] = useState<string>('');
   const [audioFileSize, setAudioFileSize] = useState<string>('');
   const [audioMimeType, setAudioMimeType] = useState<string>('audio/mp3');
@@ -128,6 +131,7 @@ export const LectureTranscription: React.FC<LectureTranscriptionProps> = ({
         reader.onloadend = () => {
           const base64Data = (reader.result as string).split(',')[1];
           setAudioBase64(base64Data);
+          setAudioFileObj(null);
         };
 
         stream.getTracks().forEach((track) => track.stop());
@@ -214,7 +218,7 @@ export const LectureTranscription: React.FC<LectureTranscriptionProps> = ({
 
     setErrorMessage(null);
 
-    const MAX_AUDIO_SIZE = 100 * 1024 * 1024;
+    const MAX_AUDIO_SIZE = 2 * 1024 * 1024 * 1024;
     if (file.size > MAX_AUDIO_SIZE) {
       const actualMb = (file.size / (1024 * 1024)).toFixed(1);
       setErrorMessage(t.transcription.sizeErr.replace('{actual}', actualMb));
@@ -242,19 +246,9 @@ export const LectureTranscription: React.FC<LectureTranscriptionProps> = ({
     setAudioFileName(file.name);
     setAudioFileSize(`${(file.size / (1024 * 1024)).toFixed(2)} MB`);
     setAudioMimeType(mime);
-    setIsReadingFile(true);
-
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onloadend = () => {
-      const base64Data = (reader.result as string).split(',')[1];
-      setAudioBase64(base64Data);
-      setIsReadingFile(false);
-    };
-    reader.onerror = () => {
-      setIsReadingFile(false);
-      setErrorMessage(t.transcription.readErr);
-    };
+    setAudioBase64(null);
+    setAudioFileObj(file);
+    setIsReadingFile(false);
 
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
@@ -265,7 +259,7 @@ export const LectureTranscription: React.FC<LectureTranscriptionProps> = ({
       return;
     }
 
-    if (!audioBase64) {
+    if (!audioBase64 && !audioFileObj) {
       setErrorMessage(t.transcription.noAudioErr);
       return;
     }
@@ -279,14 +273,22 @@ export const LectureTranscription: React.FC<LectureTranscriptionProps> = ({
         const j = await r.json().catch(() => ({}));
         return { ok: r.ok, status: r.status, j };
       };
-      const start = await post('/api/transcribe-start', {
-        audioBase64,
-        mimeType: audioMimeType || 'audio/mp3',
-        fileName: audioFileName,
-        title: audioFileName || t.transcription.title,
-        language: lang,
-        audioLang,
-      });
+      let start: { ok: boolean; status: number; j: any };
+      if (audioFileObj) {
+        setLoadingStep(1);
+        const uid = await uploadFile(audioFileObj, (p) => { setJobPct(Math.round(p * 0.08)); setJobNote(`⬆ ${p}%`); });
+        setJobNote('');
+        start = await post('/api/transcribe-file', { uploadId: uid, title: audioFileName || t.transcription.title, language: lang, audioLang });
+      } else {
+        start = await post('/api/transcribe-start', {
+          audioBase64,
+          mimeType: audioMimeType || 'audio/mp3',
+          fileName: audioFileName,
+          title: audioFileName || t.transcription.title,
+          language: lang,
+          audioLang,
+        });
+      }
       if (start.status === 501) {
         const old = await post('/api/transcribe', { audioBase64, mimeType: audioMimeType || 'audio/mp3', title: audioFileName || t.transcription.title, studentPhone: studentPhone || undefined, language: lang });
         if (!old.ok) throw new Error(old.j.error || t.assistant.errorFallback);
@@ -298,7 +300,7 @@ export const LectureTranscription: React.FC<LectureTranscriptionProps> = ({
         await new Promise((r) => setTimeout(r, 3000));
         const st = await post('/api/transcribe-status/' + start.j.jobId);
         if (!st.ok) throw new Error(st.j.error || t.assistant.errorFallback);
-        setJobPct(st.j.progress || 0);
+        setJobPct(Math.max(8, st.j.progress || 0)); setJobNote(st.j.note || '');
         setLoadingStep(st.j.stage === 'summarize' ? 3 : st.j.stage === 'transcribe' ? 2 : 1);
         if (st.j.status === 'error') throw new Error(st.j.error || t.assistant.errorFallback);
         if (st.j.status === 'done') { setTranscriptResult(st.j.result); break; }
@@ -334,6 +336,7 @@ export const LectureTranscription: React.FC<LectureTranscriptionProps> = ({
     setTranscriptResult(null);
     setAudioUrl(null);
     setAudioBase64(null);
+    setAudioFileObj(null);
     setAudioFileName('');
     setAudioFileSize('');
     setConfirmClear(false);
@@ -520,7 +523,7 @@ export const LectureTranscription: React.FC<LectureTranscriptionProps> = ({
                 <option value="ar">العربية</option>
                 <option value="en">English</option>
               </select>
-              {isLoading && <span className="font-bold">{jobPct}%</span>}
+              {isLoading && <span className="font-bold">{jobPct}%{jobNote ? ' · ' + jobNote : ''}</span>}
             </div>
             <button
               type="button"
