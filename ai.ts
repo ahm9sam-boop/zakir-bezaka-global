@@ -93,6 +93,33 @@ function viaPollinations(msgs: Msg[], json: boolean): Promise<string> {
   return p;
 }
 
+
+// Groq retires models often: ask Groq which chat models exist now and try the best ones first.
+let groqCache: { t: number; list: string[] } | null = null;
+async function groqModels(key: string): Promise<string[]> {
+  if (groqCache && Date.now() - groqCache.t < 3600e3) return groqCache.list;
+  const fallback = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
+  try {
+    const r = await timed('https://api.groq.com/openai/v1/models', { headers: { Authorization: `Bearer ${key}` } }, 10000);
+    if (!r.ok) throw new Error('models ' + r.status);
+    const j: any = await r.json();
+    const ids: string[] = (j.data || []).filter((m: any) => m.active !== false).map((m: any) => m.id as string)
+      .filter((id: string) => !/whisper|tts|guard|distil|playai|orpheus|embed|safeguard|compound/i.test(id));
+    const rank = (id: string) => {
+      const order = [/llama-3\.3-70b/, /gpt-oss-120b/, /llama-4-maverick/, /qwen.*(32b|3)/, /llama-4-scout/, /gpt-oss-20b/, /llama-3\.1-8b/];
+      const i = order.findIndex((re) => re.test(id)); return i < 0 ? 99 : i;
+    };
+    const list = ids.sort((a, b) => rank(a) - rank(b)).slice(0, 4);
+    if (!list.length) throw new Error('no models');
+    groqCache = { t: Date.now(), list };
+    console.log('groq models:', list.join(','));
+    return list;
+  } catch (e: any) {
+    console.warn('groq model list failed', e?.message);
+    return fallback;
+  }
+}
+
 async function generate(req: any): Promise<string> {
   const { msgs, hasAudio } = normalize(req.contents);
   const json = req.config?.responseMimeType === 'application/json';
@@ -117,7 +144,7 @@ async function generate(req: any): Promise<string> {
   if (!text && !hasAudio) {
     const groq = process.env.GROQ_API_KEY;
     if (groq) {
-      for (const gm of ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant']) {
+      for (const gm of await groqModels(groq)) {
         text = await attempt(() => viaOpenAI('https://api.groq.com/openai/v1/chat/completions', groq, gm, full, json));
         if (text) break;
       }
