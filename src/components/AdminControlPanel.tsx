@@ -308,7 +308,7 @@ export const AdminControlPanel: React.FC<AdminControlPanelProps> = ({
     const rows = students
       .map((s) => {
         const st = getStatusLabel(s.status);
-        const passcode = s.passcode || '1234';
+        const passcode = '';
         const timeMinutes = s.totalTimeMinutes || 0;
         const reg = s.registeredAt ? new Date(s.registeredAt).toLocaleDateString(langMeta.locale) : '';
         const login = s.lastLoginAt ? new Date(s.lastLoginAt).toLocaleDateString(langMeta.locale) : '';
@@ -601,30 +601,18 @@ export const AdminControlPanel: React.FC<AdminControlPanelProps> = ({
                           {t.admin.passcodeLabel}
                         </span>
                         <span className="text-amber-700 dark:text-amber-300 font-bold tracking-wider">
-                          {revealedPasscodes[student.id] ? student.passcode || '1234' : '••••'}
+                          ••••
                         </span>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setRevealedPasscodes((prev) => ({ ...prev, [student.id]: !prev[student.id] }))
-                          }
-                          className="text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 p-0.5 cursor-pointer"
-                        >
-                          {revealedPasscodes[student.id] ? (
-                            <EyeOff className="w-3.5 h-3.5" />
-                          ) : (
-                            <Eye className="w-3.5 h-3.5" />
-                          )}
-                        </button>
+                        
                         <button
                           type="button"
                           onClick={() => {
                             setStudentToEditPasscode({
                               id: student.id,
                               name: student.name,
-                              currentPasscode: student.passcode,
+                              currentPasscode: undefined,
                             });
-                            setTargetNewPasscode(student.passcode || '');
+                            setTargetNewPasscode('');
                           }}
                           className="text-slate-500 hover:text-amber-500 p-0.5 cursor-pointer"
                         >
@@ -884,7 +872,7 @@ export const AdminControlPanel: React.FC<AdminControlPanelProps> = ({
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
                 {t.admin.currentPassLabel}{' '}
                 <span className="font-mono font-bold text-amber-600 dark:text-amber-400">
-                  {studentToEditPasscode.currentPasscode || '1234'}
+                  ••••
                 </span>
               </p>
             </div>
