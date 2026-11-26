@@ -9,6 +9,7 @@ import { fileURLToPath } from 'url';
 import os from 'os';
 import crypto from 'crypto';
 import { studentStore } from './src/server/studentStore';
+import { addContact, listContacts, markContactRead, deleteContact } from './src/server/contacts';
 import { ipLimit, quota, aiQueue, aiCache, queueStats } from './src/server/guard';
 
 dotenv.config();
@@ -128,7 +129,7 @@ function getErrorMessage(langCode: string, type: 'no_key' | 'ai_failed' | 'bad_i
 const TOKEN_SECRET = crypto.createHash('sha256').update('zk-v1|' + (process.env.TOKEN_SECRET || '') + '|' + (process.env.GROQ_API_KEY || '') + '|' + (process.env.GEMINI_API_KEY || '')).digest('hex');
 const sig = (v: string) => crypto.createHmac('sha256', TOKEN_SECRET).update(v).digest('hex').slice(0, 40);
 const studentToken = (phone: string) => 's.' + Buffer.from(phone).toString('base64url') + '.' + sig('s|' + phone);
-const adminToken = () => 'a.' + sig('admin');
+const adminToken = () => 'a.' + sig('admin|' + studentStore.adminSeal());
 const pubStudent = (x: any) => { if (!x) return x; const { passcode: _a, passhash: _b, ...r } = x; return r; };
 const withToken = (st: any) => { if (!(st && st.phone)) return st; const { passcode: _pc, passhash: _ph, ...rest } = st; return { ...rest, token: studentToken(String(st.phone)) }; };
 const safeEq = (a: string, b: string) => a.length === b.length && crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
@@ -179,12 +180,13 @@ app.post('/api/transcribe-file', ipLimit('ai', 90, 60e3, 'طلبات كتير ف
 app.post('/api/youtube', ipLimit('ai', 90, 60e3, 'طلبات كتير في وقت قصير.'), quota('youtube', phoneOf, mark));
 
 app.get('/api/status', (_req, res) => {
-  const apiKey = process.env.GEMINI_API_KEY;
-  const isKeyConfigured = true;
+  const providers = { gemini: !!process.env.GEMINI_API_KEY, groq: !!process.env.GROQ_API_KEY, huggingface: !!process.env.HF_API_KEY, openrouter: !!process.env.OPENROUTER_API_KEY, fallback: 'pollinations' };
+  const isKeyConfigured = true; // AI answers always have at least the free fallback
   res.json({
     status: 'online',
     appName: 'Zakir Smart / ذاكر بذكاء',
     hasGeminiKey: isKeyConfigured,
+    providers,
     model: isKeyConfigured ? 'ai' : 'unavailable',
     transcribeModel: isKeyConfigured ? 'ai' : 'unavailable',
     version: '2.0.0',
@@ -429,6 +431,33 @@ Return ONLY valid JSON matching this schema:
     console.error('Gemini Summarize error:', err?.message || err);
     return res.status(502).json({ error: getErrorMessage(langCode, 'ai_failed') });
   }
+});
+
+// OCR for images and scanned PDF pages (Groq vision, free tier)
+app.post('/api/ocr', ipLimit('ocr', 40, 10 * 60e3, 'Too many requests.'), async (req, res) => {
+  const { imageBase64, mimeType = 'image/jpeg' } = req.body || {};
+  const keys = (process.env.GROQ_API_KEY || '').split(',').map((x) => x.trim()).filter(Boolean);
+  if (!imageBase64 || typeof imageBase64 !== 'string') return res.status(400).json({ error: 'No image' });
+  if (!keys.length) return res.status(503).json({ error: 'OCR is not configured on the server.' });
+  const models = ['meta-llama/llama-4-scout-17b-16e-instruct', 'meta-llama/llama-4-maverick-17b-128e-instruct'];
+  let lastErr = '';
+  for (const key of keys) for (const model of models) {
+    try {
+      const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model, temperature: 0, max_tokens: 4000, messages: [{ role: 'user', content: [
+          { type: 'text', text: 'Extract ALL the text in this image exactly as written (Arabic or English), keep the reading order. Output only the text, no comments. If there is no text, output nothing.' },
+          { type: 'image_url', image_url: { url: `data:${mimeType};base64,${imageBase64}` } } ] }] }),
+        signal: AbortSignal.timeout(60000),
+      });
+      const j: any = await r.json().catch(() => ({}));
+      if (r.ok) return res.json({ text: String(j?.choices?.[0]?.message?.content || '').trim() });
+      lastErr = j?.error?.message || 'status ' + r.status;
+    } catch (e: any) { lastErr = e?.message || 'network'; }
+  }
+  console.error('ocr failed', lastErr);
+  return res.status(502).json({ error: 'تعذر استخراج النص من الصورة دلوقتي.' });
 });
 
 // 4. Quiz Generator API
@@ -869,39 +898,34 @@ Respond ONLY with valid JSON:
 // ==========================================
 // 8. Contact Feedback Endpoint
 // ==========================================
-app.post('/api/contact', (req, res) => {
+app.post('/api/contact', ipLimit('contact', 6, 10 * 60e3, 'رسائل كتير. استنى شوية وابعت تاني.'), async (req, res) => {
   try {
     const { name, phone, subject, message } = req.body || {};
     if (!message || typeof message !== 'string' || !message.trim()) {
       return res.status(400).json({ error: 'Message is required' });
     }
-    const dataDir = path.resolve(__dirname, 'data');
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true });
-    }
-    const contactsFile = path.join(dataDir, 'contacts.json');
-    let existing: any[] = [];
-    if (fs.existsSync(contactsFile)) {
-      try {
-        existing = JSON.parse(fs.readFileSync(contactsFile, 'utf-8'));
-      } catch {
-        existing = [];
-      }
-    }
-    existing.unshift({
-      id: `msg_${Date.now()}`,
-      name: (name || '').toString().trim(),
-      phone: (phone || '').toString().trim(),
-      subject: (subject || 'General').toString().trim(),
-      message: message.trim(),
-      createdAt: new Date().toISOString(),
+    const st: any = phoneOf(req);
+    await addContact({
+      name: String(name || st?.name || '').trim().slice(0, 120),
+      phone: String(phone || st?.phone || '').trim().slice(0, 40),
+      subject: String(subject || 'General').trim().slice(0, 120),
+      message: message.trim().slice(0, 4000),
     });
-    fs.writeFileSync(contactsFile, JSON.stringify(existing.slice(0, 200), null, 2), 'utf-8');
     return res.json({ success: true });
   } catch (err) {
     console.error('Contact save error:', err);
     return res.status(500).json({ error: 'Failed to send message' });
   }
+});
+
+app.get('/api/admin/messages', async (_req, res) => {
+  try { return res.json({ messages: await listContacts() }); } catch (e: any) { return res.status(500).json({ error: 'Could not load messages' }); }
+});
+app.post('/api/admin/messages/:id/read', async (req, res) => {
+  try { await markContactRead(String(req.params.id)); return res.json({ success: true }); } catch { return res.status(500).json({ error: 'failed' }); }
+});
+app.delete('/api/admin/messages/:id', async (req, res) => {
+  try { await deleteContact(String(req.params.id)); return res.json({ success: true }); } catch { return res.status(500).json({ error: 'failed' }); }
 });
 
 // ==========================================
@@ -1016,8 +1040,7 @@ app.get('/api/auth/student-check', (req, res) => {
 
 app.post('/api/auth/admin-login', (req, res) => {
   const { passcode } = req.body || {};
-  const settings = studentStore.getSettings();
-  if (!settings.adminPasscode || settings.adminPasscode.length < 6 || !passcode || String(passcode).trim() !== settings.adminPasscode) {
+  if (!passcode || typeof passcode !== 'string' || !studentStore.verifyAdmin(passcode.trim())) {
     return res.status(401).json({ error: 'Invalid admin passcode' });
   }
   return res.json({
@@ -1041,7 +1064,7 @@ app.get('/api/admin/overview', (_req, res) => {
     settings: {
       autoApprove: settings.autoApprove,
       requirePhoneVerification: settings.requirePhoneVerification,
-      hasCustomPasscode: settings.adminPasscode !== '1q1q',
+      hasCustomPasscode: studentStore.hasAdminPasscode(),
     },
   });
 });
@@ -1095,11 +1118,14 @@ app.post('/api/admin/settings', (req, res) => {
   if (typeof autoApprove === 'boolean') {
     updates.autoApprove = autoApprove;
   }
-  if (newPasscode && typeof newPasscode === 'string' && newPasscode.trim().length >= 4) {
-    updates.adminPasscode = newPasscode.trim();
+  if (newPasscode !== undefined) {
+    if (typeof newPasscode !== 'string' || newPasscode.trim().length < 6) {
+      return res.status(400).json({ error: 'Admin code must be at least 6 characters.' });
+    }
+    studentStore.setAdminPasscode(newPasscode.trim());
   }
   const settings = studentStore.updateSettings(updates);
-  return res.json({ success: true, settings });
+  return res.json({ success: true, passcodeChanged: newPasscode !== undefined, token: newPasscode !== undefined ? adminToken() : undefined, settings: { autoApprove: settings.autoApprove } });
 });
 
 app.post('/api/student/activity', (req, res) => {
