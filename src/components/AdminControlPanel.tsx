@@ -288,7 +288,7 @@ export const AdminControlPanel: React.FC<AdminControlPanelProps> = ({
 
   const handleChangePasscode = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newPasscode.length < 6) return;
+    if (newPasscode.length < 4) return;
 
     try {
       const res = await fetch('/api/admin/settings', {
@@ -970,7 +970,7 @@ export const AdminControlPanel: React.FC<AdminControlPanelProps> = ({
                   autoComplete="new-password"
                   name="admin-new-passcode"
                   required
-                  minLength={6}
+                  minLength={4}
                   value={newPasscode}
                   onChange={(e) => setNewPasscode(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:outline-none focus:border-amber-500 font-mono text-center text-base"
