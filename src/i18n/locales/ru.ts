@@ -34,7 +34,7 @@ export const ru: TranslationSchema = {
     brandPart2: 'Smart',
     brandTag: 'ИИ',
     brandSub: 'Ваша Глобальная Учебная ИИ-Платформа',
-    aiOnline: 'Gemini 4 Flash и 3.5 Transcribe Готовы',
+    aiOnline: 'AI Ready',
     aiOffline: 'Нет подключения к ИИ',
     menuLabel: 'Главное Меню',
     toolsHeader: 'Инструменты Учёбы',
@@ -121,7 +121,7 @@ export const ru: TranslationSchema = {
   assistant: {
     title: 'ИИ-Репетитор',
     subtitle: 'Задавайте вопросы и получайте пошаговые объяснения на вашем языке',
-    liveEngine: 'Gemini 4 Flash',
+    liveEngine: 'AI',
     attachContext: 'Прикрепить Текст',
     contextAttached: 'Контекст Прикреплён',
     clearChat: 'Очистить',
@@ -234,7 +234,7 @@ export const ru: TranslationSchema = {
   transcription: {
     title: 'ИИ-Расшифровка Лекций',
     subtitle: 'Запишите голос с микрофона, загрузите аудио (MP3, M4A, WAV до 100 МБ) или используйте живую диктовку.',
-    engineBadge: 'Gemini 3.5 Transcribe',
+    engineBadge: 'AI Transcribe',
     micTitle: 'Запись с Микрофона',
     micStart: 'Нажмите для начала записи',
     micStop: 'Идёт запись... нажмите для остановки',
