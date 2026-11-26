@@ -34,7 +34,7 @@ export const fr: TranslationSchema = {
     brandPart2: 'Smart',
     brandTag: 'IA',
     brandSub: 'Votre Plateforme d’Étude Mondiale',
-    aiOnline: 'Gemini 4 Flash & 3.5 Transcribe Prêt',
+    aiOnline: 'AI Ready',
     aiOffline: 'Connexion IA indisponible',
     menuLabel: 'Menu Principal',
     toolsHeader: 'Outils d’Étude',
@@ -121,7 +121,7 @@ export const fr: TranslationSchema = {
   assistant: {
     title: 'Tuteur IA d’Étude',
     subtitle: 'Posez vos questions et recevez des explications claires dans votre langue',
-    liveEngine: 'Gemini 4 Flash',
+    liveEngine: 'AI',
     attachContext: 'Joindre un Texte',
     contextAttached: 'Contexte Joint',
     clearChat: 'Effacer',
@@ -234,7 +234,7 @@ export const fr: TranslationSchema = {
   transcription: {
     title: 'Transcription de Cours par IA',
     subtitle: 'Enregistrez en direct, importez un fichier audio (MP3, M4A, WAV jusqu’à 100 Mo) ou utilisez la dictée vocale.',
-    engineBadge: 'Gemini 3.5 Transcribe',
+    engineBadge: 'AI Transcribe',
     micTitle: 'Enregistrer au Micro',
     micStart: 'Appuyez pour enregistrer',
     micStop: 'Enregistrement... appuyez pour arrêter',
