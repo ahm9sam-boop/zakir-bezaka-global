@@ -10,7 +10,7 @@ const nativeFetch = window.fetch.bind(window);
 window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
   try {
     const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
-    if (url.startsWith('/api/') && !url.startsWith('/api/auth/')) {
+    if (url.startsWith('/api/') && (!url.startsWith('/api/auth/') || url.startsWith('/api/auth/student-check'))) {
       let token = '';
       const adminTok = localStorage.getItem('zakir_admin_token') || '';
       const stu = JSON.parse(localStorage.getItem('zakir_current_student') || 'null');
