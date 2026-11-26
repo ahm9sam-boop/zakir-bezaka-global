@@ -710,7 +710,7 @@ export const id: TranslationSchema = {
     adminPinPlaceholder: 'Masukkan PIN Admin...',
     adminLoginBtn: 'Buka Panel Admin',
     checkingBtn: 'Memeriksa...',
-    continueGuest: 'Jelajahi sebagai Tamu',
+    backToSignIn: 'Kembali ke masuk',
     aboutLink: 'Tentang & Kebijakan Privasi',
     welcomeSuccess: 'Selamat datang kembali, {name}!',
     registerSuccess: 'Akun dibuat! Membuka platform...',
