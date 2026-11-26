@@ -27,10 +27,24 @@ const POOL: { t: string; b: string }[] = [
 const SLOTS = [[8, 30], [12, 0], [15, 30], [19, 0], [21, 30]];
 const BASE = 7100;
 
+import { getPlugin } from './native';
 export function getLN(): LN | null {
-  const w = window as unknown as { Capacitor?: { isNativePlatform?: () => boolean; Plugins?: Record<string, LN> } };
-  if (!w.Capacitor?.isNativePlatform?.()) return null;
-  return w.Capacitor.Plugins?.LocalNotifications || null;
+  return getPlugin<LN>('LocalNotifications');
+}
+
+export async function testNotificationNow(): Promise<string> {
+  const ln = getLN();
+  if (!ln) return 'مش شغال جوه التطبيق (محتاج نسخة الأندرويد).';
+  try {
+    let p = await ln.checkPermissions();
+    if (p.display !== 'granted') p = await ln.requestPermissions();
+    if (p.display !== 'granted') return 'الإذن مرفوض. فعّل الإشعارات من إعدادات الموبايل للتطبيق.';
+    try { await ln.createChannel?.({ id: 'study', name: 'تذكيرات المذاكرة', importance: 4, vibration: true, visibility: 1 }); } catch { /* ignore */ }
+    await ln.schedule({ notifications: [{ id: 7099, title: 'تجربة الإشعارات ✅', body: 'لو شايف الرسالة دي يبقى الإشعارات شغالة.', schedule: { at: new Date(Date.now() + 5000), allowWhileIdle: true }, channelId: 'study', smallIcon: 'ic_launcher' }] });
+    return 'اتبعت. هيظهر إشعار بعد 5 ثواني.';
+  } catch (e) {
+    return 'فشل: ' + (e instanceof Error ? e.message : 'خطأ');
+  }
 }
 
 export async function enableNativeReminders(ask: boolean): Promise<boolean> {
