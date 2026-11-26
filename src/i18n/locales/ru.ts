@@ -710,7 +710,7 @@ export const ru: TranslationSchema = {
     adminPinPlaceholder: 'Введите Admin PIN...',
     adminLoginBtn: 'Открыть Панель Админа',
     checkingBtn: 'Проверка...',
-    continueGuest: 'Войти как Гость',
+    backToSignIn: 'Назад ко входу',
     aboutLink: 'О проекте и Приватность',
     welcomeSuccess: 'С возвращением, {name}!',
     registerSuccess: 'Аккаунт создан! Запуск...',
