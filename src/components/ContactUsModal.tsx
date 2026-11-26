@@ -121,41 +121,7 @@ export const ContactUs: React.FC<ContactUsProps> = ({ onClose, isModal = false }
       )}
 
       {/* Contact Channels */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        {/* WhatsApp Support */}
-        <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4 shadow-xl flex flex-col justify-between">
-          <div className="space-y-3">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-              <MessageCircle className="w-7 h-7" />
-            </div>
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t.contact.whatsappTitle}</h3>
-            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-              {t.contact.whatsappSub}
-            </p>
-
-            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800/90 space-y-2">
-              <div className="text-[11px] text-slate-500 dark:text-slate-400">{t.contact.whatsappNumberLabel}</div>
-              <div className="text-xl font-mono font-black text-emerald-600 dark:text-emerald-400 tracking-wider" dir="ltr">
-                01221043832
-              </div>
-              <div className="text-[11px] text-slate-500 flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
-                <span>{t.contact.replySpeed}</span>
-              </div>
-            </div>
-          </div>
-
-          <a
-            href="https://wa.me/201221043832"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-slate-950 font-bold text-sm shadow-xl shadow-emerald-500/20 flex items-center justify-center gap-2 transition"
-          >
-            <MessageCircle className="w-5 h-5 fill-slate-950" />
-            <span>{t.contact.openWhatsappBtn}</span>
-          </a>
-        </div>
-
+      <div className="grid grid-cols-1 gap-5 max-w-2xl mx-auto w-full">
         {/* Message Form */}
         <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4 shadow-xl">
           <div className="space-y-1">
@@ -186,7 +152,6 @@ export const ContactUs: React.FC<ContactUsProps> = ({ onClose, isModal = false }
                 <label className="text-slate-700 dark:text-slate-300 font-bold">{t.contact.phoneLabel}</label>
                 <input
                   type="text"
-                  required
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder={t.contact.phonePlaceholder}
