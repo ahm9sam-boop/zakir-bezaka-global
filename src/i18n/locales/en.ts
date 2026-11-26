@@ -863,7 +863,7 @@ Good science reports all findings honestly—even results that contradict the in
     emptyMsg: 'No notifications yet.',
     welcomeTitle: 'Welcome to Zakir Smart! 🎓',
     welcomeMsg: 'Smart study reminders are ready to keep your momentum going.',
-    updateTitle: '🚀 Multi-Language & Gemini 4 Ready',
+    updateTitle: '🚀 Multi-Language',
     updateMsg: 'Enjoy 10 languages, Light/Dark themes, and fast AI summaries & quizzes!',
     alerts: [
       { title: '💡 Quick Spaced Repetition', message: 'Review 5 flashcards now to strengthen long-term memory!' },
