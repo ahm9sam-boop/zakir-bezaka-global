@@ -720,7 +720,7 @@ Good science reports all findings honestly—even results that contradict the in
     adminPinPlaceholder: 'Enter Admin PIN...',
     adminLoginBtn: 'Open Admin Control Panel',
     checkingBtn: 'Verifying...',
-    continueGuest: 'Explore as Guest',
+    backToSignIn: 'Back to sign in',
     aboutLink: 'About & Privacy Policy',
     welcomeSuccess: 'Welcome back, {name}! Entering...',
     registerSuccess: 'Account created! Launching platform...',
