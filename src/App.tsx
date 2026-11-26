@@ -68,6 +68,7 @@ export default function App() {
   const [isAdmin, setIsAdmin] = useState<boolean>(() =>
     safeStorageGet<boolean>('zakir_is_admin', false)
   );
+  const [aboutPeek, setAboutPeek] = useState<boolean>(false);
   const [showAuthModal, setShowAuthModal] = useState<boolean>(() => {
     const dismissed = safeStorageGet<boolean>('zakir_auth_dismissed', false);
     const student = safeStorageGet<Student | null>('zakir_current_student', null);
@@ -476,16 +477,24 @@ export default function App() {
       />
 
       <StudentAuthModal
-        isOpen={showAuthModal}
+        isOpen={!currentStudent && !isAdmin && !aboutPeek}
         onStudentLoginSuccess={handleStudentLoginSuccess}
         onAdminLoginSuccess={handleAdminLoginSuccess}
-        onClose={handleDismissAuth}
-        canDismiss
+        canDismiss={false}
         onOpenAbout={() => {
-          handleDismissAuth();
+          setAboutPeek(true);
           setCurrentTab('about');
         }}
       />
+      {aboutPeek && !currentStudent && !isAdmin && (
+        <button
+          type="button"
+          onClick={() => { setAboutPeek(false); setCurrentTab('home'); }}
+          className="fixed top-3 inset-x-3 z-[60] rounded-2xl bg-teal-500 text-slate-950 font-bold py-2.5 text-sm shadow-xl cursor-pointer"
+        >
+          {t.auth.backToSignIn}
+        </button>
+      )}
     </div>
   );
 }
