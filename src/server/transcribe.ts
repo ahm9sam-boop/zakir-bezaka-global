@@ -4,7 +4,7 @@ import path from 'path';
 import { spawn } from 'child_process';
 import ffmpegPath from 'ffmpeg-static';
 
-export type Job = { id: string; status: 'processing' | 'done' | 'error'; progress: number; stage: string; result?: any; error?: string; created: number };
+export type Job = { id: string; status: 'processing' | 'done' | 'error'; progress: number; stage: string; result?: any; error?: string; created: number; note?: string };
 export const jobs = new Map<string, Job>();
 
 setInterval(() => { const now = Date.now(); for (const [k, j] of jobs) if (now - j.created > 3 * 3600e3) jobs.delete(k); }, 600e3).unref();
@@ -21,8 +21,9 @@ export async function toChunks(input: string, dir: string, segSec = 600): Promis
   return fs.readdirSync(dir).filter(f => /^c\d+\.mp3$/.test(f)).sort().map(f => path.join(dir, f));
 }
 
-async function whisper(file: string, key: string, lang?: string, prompt?: string): Promise<string> {
-  for (let attempt = 0; attempt < 4; attempt++) {
+async function whisper(file: string, key: string, lang: string | undefined, prompt: string | undefined, job?: Job): Promise<string> {
+  const started = Date.now();
+  for (let attempt = 0; attempt < 12; attempt++) {
     const fd = new FormData();
     fd.append('file', new Blob([fs.readFileSync(file)], { type: 'audio/mpeg' }), 'audio.mp3');
     fd.append('model', 'whisper-large-v3-turbo');
@@ -30,19 +31,30 @@ async function whisper(file: string, key: string, lang?: string, prompt?: string
     fd.append('temperature', '0');
     if (lang) fd.append('language', lang);
     if (prompt) fd.append('prompt', prompt.slice(-200));
-    const r = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', { method: 'POST', headers: { Authorization: `Bearer ${key}` }, body: fd });
-    if (r.ok) return ((await r.json()) as any).text || '';
-    if (r.status === 429 || r.status >= 500) { const wait = Number(r.headers.get('retry-after')) || 20 * (attempt + 1); await new Promise(s => setTimeout(s, Math.min(wait, 70) * 1000)); continue; }
+    let r: Response | null = null;
+    try { r = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', { method: 'POST', headers: { Authorization: `Bearer ${key}` }, body: fd, signal: AbortSignal.timeout(120000) }); } catch { r = null; }
+    if (r && r.ok) { if (job) job.note = ''; return ((await r.json()) as any).text || ''; }
+    if (!r || r.status === 429 || r.status >= 500) {
+      // Free-tier limits: wait as long as the server asks (up to 15 min), keeping the user informed.
+      const ra = r ? Number(r.headers.get('retry-after')) : 0;
+      const wait = Math.min(Math.max(ra || 15 * (attempt + 1), 5), 900);
+      if (Date.now() - started + wait * 1000 > 40 * 60 * 1000) throw new Error('whisper rate limit');
+      if (job) { job.stage = 'wait'; job.note = `free limit, resuming in ~${Math.ceil(wait / 60)} min`; }
+      await new Promise((s) => setTimeout(s, wait * 1000));
+      if (job) job.stage = 'transcribe';
+      continue;
+    }
     throw new Error('whisper ' + r.status + ' ' + (await r.text()).slice(0, 200));
   }
   throw new Error('whisper rate limit');
 }
 
-export async function transcribeJob(job: Job, buf: Buffer, ext: string, opts: { lang?: string; key: string; summarize: (text: string) => Promise<{ summary: string; keyPoints: string[] }>; title: string }) {
+export async function transcribeJob(job: Job, buf: Buffer | string, ext: string, opts: { lang?: string; key: string; summarize: (text: string) => Promise<{ summary: string; keyPoints: string[] }>; title: string }) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tr-'));
   try {
-    const input = path.join(dir, 'in.' + (ext || 'bin'));
-    fs.writeFileSync(input, buf);
+    let input: string;
+    if (typeof buf === 'string') input = buf;
+    else { input = path.join(dir, 'in.' + (ext || 'bin')); fs.writeFileSync(input, buf); }
     job.stage = 'convert'; job.progress = 5;
     const out = path.join(dir, 'out'); fs.mkdirSync(out);
     const chunks = await toChunks(input, out);
@@ -50,7 +62,7 @@ export async function transcribeJob(job: Job, buf: Buffer, ext: string, opts: { 
     const parts: string[] = [];
     for (let i = 0; i < chunks.length; i++) {
       job.stage = 'transcribe'; job.progress = 10 + Math.round((i / chunks.length) * 75);
-      parts.push((await whisper(chunks[i], opts.key, opts.lang, parts[parts.length - 1])).trim());
+      parts.push((await whisper(chunks[i], opts.key, opts.lang, parts[parts.length - 1], job)).trim());
     }
     const transcription = parts.filter(Boolean).join('\n\n');
     if (transcription.length < 5) throw new Error('No speech recognized in audio');
@@ -63,5 +75,6 @@ export async function transcribeJob(job: Job, buf: Buffer, ext: string, opts: { 
     job.status = 'error'; job.error = String(e?.message || e).slice(0, 300);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
+    if (typeof buf === 'string') { try { fs.rmSync(path.dirname(buf), { recursive: true, force: true }); } catch {} }
   }
 }
