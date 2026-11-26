@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import os from 'os';
 import { studentStore } from './src/server/studentStore';
 
 dotenv.config();
@@ -571,10 +572,57 @@ app.post('/api/transcribe-start', async (req, res) => {
   return res.json({ jobId: job.id });
 });
 
+// Chunked upload for long recordings (1-2 h): pieces are appended to a temp file, then transcribed as one job.
+const UP_ROOT = path.join(os.tmpdir(), 'zk-uploads');
+const MAX_UPLOAD = 2 * 1024 * 1024 * 1024;
+const upState = new Map<string, { next: number; size: number; t: number }>();
+setInterval(() => { const now = Date.now(); for (const [k, v] of upState) if (now - v.t > 3 * 3600e3) { upState.delete(k); try { fs.rmSync(path.join(UP_ROOT, k), { recursive: true, force: true }); } catch {} } }, 600e3).unref();
+app.post('/api/upload/:id', express.raw({ type: '*/*', limit: '16mb' }), (req, res) => {
+  const id = String(req.params.id);
+  if (!/^u[a-z0-9]{8,40}$/.test(id)) return res.status(400).json({ error: 'bad id' });
+  const i = Number(req.query.i);
+  if (!Number.isInteger(i) || i < 0 || !Buffer.isBuffer(req.body)) return res.status(400).json({ error: 'bad chunk' });
+  const dir = path.join(UP_ROOT, id);
+  const st = upState.get(id) || { next: 0, size: 0, t: Date.now() };
+  if (i < st.next) return res.json({ ok: true, dup: true });
+  if (i > st.next) return res.status(409).json({ error: 'out of order' });
+  if (st.size + req.body.length > MAX_UPLOAD) return res.status(413).json({ error: 'File too large (max 2 GB).' });
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+    fs.appendFileSync(path.join(dir, 'data'), req.body);
+  } catch { return res.status(500).json({ error: 'disk error' }); }
+  st.next = i + 1; st.size += req.body.length; st.t = Date.now(); upState.set(id, st);
+  return res.json({ ok: true });
+});
+
+app.post('/api/transcribe-file', async (req, res) => {
+  const { uploadId, title = 'Lecture Recording', language, audioLang } = req.body || {};
+  const { code: langCode, meta: langMeta } = resolveLang(language);
+  const key = process.env.GROQ_API_KEY;
+  if (!key) return res.status(501).json({ error: 'no-groq' });
+  if (!/^u[a-z0-9]{8,40}$/.test(String(uploadId))) return res.status(400).json({ error: getErrorMessage(langCode, 'bad_input') });
+  const file = path.join(UP_ROOT, String(uploadId), 'data');
+  if (!fs.existsSync(file)) return res.status(404).json({ error: 'Upload not found. Please upload again.' });
+  upState.delete(String(uploadId));
+  const job: Job = { id: 'j' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7), status: 'processing', progress: 1, stage: 'convert', created: Date.now() };
+  jobs.set(job.id, job);
+  const hint = audioLang && audioLang !== 'auto' ? String(audioLang) : undefined;
+  transcribeJob(job, file, 'bin', {
+    key, lang: hint, title: String(title).slice(0, 200),
+    summarize: async (text: string) => {
+      const ai = getGeminiClient(); if (!ai) throw new Error('no ai');
+      const body = text.length > 30000 ? text.slice(0, 20000) + '\n...\n' + text.slice(-9000) : text;
+      const r: any = await ai.models.generateContent({ model: TEXT_MODEL, contents: `Summarize this lecture transcript strictly in ${langMeta.name}. Respond ONLY with JSON {"summary":"concise academic summary","keyPoints":["5-8 key exam points"]}.\n"""${body}"""`, config: { responseMimeType: 'application/json' } });
+      const j = extractJson(r?.text || '{}'); return { summary: j.summary || '', keyPoints: Array.isArray(j.keyPoints) ? j.keyPoints : [] };
+    },
+  });
+  return res.json({ jobId: job.id });
+});
+
 app.get('/api/transcribe-status/:id', (req, res) => {
   const j = jobs.get(req.params.id);
   if (!j) return res.status(404).json({ error: 'Job not found (server restarted?). Try again.' });
-  return res.json({ status: j.status, progress: j.progress, stage: j.stage, result: j.result, error: j.error });
+  return res.json({ status: j.status, progress: j.progress, stage: j.stage, note: j.note, result: j.result, error: j.error });
 });
 
 app.post('/api/transcribe', async (req, res) => {
