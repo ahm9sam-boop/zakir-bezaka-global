@@ -597,17 +597,7 @@ export const StudentAuthModal: React.FC<StudentAuthModalProps> = ({
 
         {/* Footer links: Guest & About/Privacy */}
         <div className="pt-2 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs">
-          {canDismiss && onClose ? (
-            <button
-              type="button"
-              onClick={onClose}
-              className="text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 font-semibold transition cursor-pointer"
-            >
-              {t.auth.continueGuest}
-            </button>
-          ) : (
-            <span />
-          )}
+          <span />
 
           {onOpenAbout && (
             <button
