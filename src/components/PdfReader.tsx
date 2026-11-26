@@ -276,7 +276,8 @@ export const PdfReader: React.FC<PdfReaderProps> = ({
     activeLoadingTaskRef.current = null;
   };
 
-  const handleLoadSampleBook = () => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _unusedSample = () => {
     resetReaderState();
     setFileName(t.pdf.sampleBookName);
     setFileSize('1.4 MB');
@@ -350,14 +351,6 @@ export const PdfReader: React.FC<PdfReaderProps> = ({
             <span>{t.pdf.uploadBtn}</span>
           </button>
 
-          <button
-            type="button"
-            onClick={handleLoadSampleBook}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs sm:text-sm border border-slate-200 dark:border-slate-700 transition cursor-pointer"
-          >
-            <BookOpen className="w-4 h-4 text-teal-600 dark:text-teal-400" />
-            <span>{t.pdf.sampleBtn}</span>
-          </button>
         </div>
       </div>
 
@@ -409,16 +402,6 @@ export const PdfReader: React.FC<PdfReaderProps> = ({
               {t.pdf.dropSub}
             </div>
           </div>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleLoadSampleBook();
-            }}
-            className="mt-1 text-xs text-teal-600 dark:text-teal-400 hover:underline font-semibold underline-offset-4 cursor-pointer"
-          >
-            {t.pdf.dropSample}
-          </button>
         </div>
       )}
 
