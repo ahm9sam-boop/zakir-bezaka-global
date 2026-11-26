@@ -233,7 +233,7 @@ export const de: TranslationSchema = {
   },
   transcription: {
     title: 'KI-Vorlesungstranskription',
-    subtitle: 'Nimm direkt per Mikrofon auf, lade Audio (MP3, M4A, WAV bis 100 MB) hoch oder nutze Live-Diktat.',
+    subtitle: 'Nimm direkt per Mikrofon auf, lade Audio (MP3, M4A, WAV bis 2 GB) hoch oder nutze Live-Diktat.',
     engineBadge: 'AI Transcribe',
     micTitle: 'Mit Mikrofon aufnehmen',
     micStart: 'Klicken zum Starten',
@@ -241,7 +241,7 @@ export const de: TranslationSchema = {
     micRecording: 'Aufnahme',
     micErr: 'Mikrofonzugriff fehlgeschlagen. Lade stattdessen eine Audiodatei hoch.',
     uploadTitle: 'Audiodatei hochladen',
-    uploadSub: 'Unterstützt MP3, M4A, WAV, WebM, OGG bis 100 MB',
+    uploadSub: 'Unterstützt MP3, M4A, WAV, WebM, OGG bis 2 GB',
     chooseFileBtn: 'Audio auswählen',
     demoBtn: 'Beispielvorlesung testen',
     liveTitle: 'Live-Spracherkennung',
