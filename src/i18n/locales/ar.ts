@@ -718,7 +718,7 @@ export const ar: TranslationSchema = {
     adminPinPlaceholder: 'أدخل الرمز السري للمتحكم...',
     adminLoginBtn: 'دخول لوحة تحكم وإدارة الطلاب',
     checkingBtn: 'جارٍ التحقق...',
-    continueGuest: 'تصفح كزائر الآن',
+    backToSignIn: 'الرجوع لتسجيل الدخول',
     aboutLink: 'عن المنصة وسياسة الخصوصية',
     welcomeSuccess: 'مرحباً بك يا {name}! جارٍ الدخول...',
     registerSuccess: 'تم تسجيلك بنجاح! جارٍ فتح المنصة فوراً...',
