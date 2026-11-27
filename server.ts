@@ -1,6 +1,6 @@
 import express from 'express';
 import { createServer as createViteServer } from 'vite';
-import { getAi, geminiHealth } from './ai';
+import { getAi, geminiHealth, geminiKeys, geminiModels } from './ai';
 import { jobs, transcribeJob, Job } from './src/server/transcribe';
 import dotenv from 'dotenv';
 import fs from 'fs';
@@ -234,23 +234,53 @@ app.get('/ads.txt', (_req, res) => {
 });
 app.get('/api/ads-config', (_req, res) => res.json({ client: process.env.ADSENSE_CLIENT || '', slot: process.env.ADSENSE_SLOT || '' }));
 
+async function geminiYoutube(videoId: string, lang: string): Promise<string> {
+  const keys = geminiKeys();
+  if (!keys.length) throw new Error('no gemini key');
+  const prompt = `Transcribe the speech of this YouTube video word for word in the language spoken${lang ? ` (preferred language code: ${lang})` : ''}. Output only the transcript text, no timestamps, no comments.`;
+  let last = '';
+  for (const key of keys) {
+    for (const model of (await geminiModels(key)).slice(0, 3)) {
+      try {
+        const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ role: 'user', parts: [{ file_data: { file_uri: `https://www.youtube.com/watch?v=${videoId}` } }, { text: prompt }] }], generationConfig: { temperature: 0 } }),
+          signal: AbortSignal.timeout(150000),
+        });
+        if (!r.ok) { last = `gemini ${model} ${r.status}`; continue; }
+        const j: any = await r.json();
+        const t = (j?.candidates?.[0]?.content?.parts || []).map((p: any) => p.text || '').join('').trim();
+        if (t) return t;
+        last = 'gemini empty';
+      } catch (e: any) { last = 'gemini ' + (e?.message || 'error'); }
+    }
+  }
+  throw new Error(last || 'gemini failed');
+}
+
 app.post('/api/youtube', async (req, res) => {
+  const FAIL = 'تعذر استيراد الفيديو (قد يكون خاصاً أو طويلاً جداً). افتح الفيديو، اضغط Show transcript وانسخ النص والصقه هنا، أو ارفع الملف الصوتي للتفريغ. / Could not import this video (private or too long). Copy its transcript and paste it here, or upload the audio file.';
+  const url = String(req.body?.url || '');
+  const m = url.match(/(?:v=|youtu\.be\/|shorts\/|embed\/)([A-Za-z0-9_-]{11})/);
+  if (!m) return res.status(400).json({ error: 'Invalid YouTube link' });
+  const want = String(req.body?.language || 'en');
   try {
-    const url = String(req.body?.url || '');
-    const m = url.match(/(?:v=|youtu\.be\/|shorts\/|embed\/)([A-Za-z0-9_-]{11})/);
-    if (!m) return res.status(400).json({ error: 'Invalid YouTube link' });
-    const page = await (await fetch(`https://www.youtube.com/watch?v=${m[1]}&hl=en`, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36', 'Accept-Language': 'en-US,en;q=0.9', Cookie: 'CONSENT=YES+1' } })).text();
+    const page = await (await fetch(`https://www.youtube.com/watch?v=${m[1]}&hl=en`, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36', 'Accept-Language': 'en-US,en;q=0.9', Cookie: 'CONSENT=YES+1' }, signal: AbortSignal.timeout(15000) })).text();
     const mm = page.match(/"captionTracks":(\[.*?\])/);
-    if (!mm) return res.status(404).json({ error: 'YouTube blocks automatic import from our servers for this video. Open the video, tap Show transcript, copy it and paste it here, or upload the audio file for transcription.' });
-    const tracks = JSON.parse(mm[1]);
-    const want = String(req.body?.language || 'en');
-    const tr = tracks.find((t: any) => t.languageCode?.startsWith(want)) || tracks.find((t: any) => t.languageCode?.startsWith('en')) || tracks[0];
-    const j: any = await (await fetch(tr.baseUrl + '&fmt=json3')).json();
-    const text = (j.events || []).map((e: any) => (e.segs || []).map((s: any) => s.utf8).join('')).join(' ').replace(/\s+/g, ' ').trim();
-    if (!text) return res.status(404).json({ error: 'Empty transcript' });
-    return res.json({ text: text.slice(0, 40000), lang: tr.languageCode });
+    if (mm) {
+      const tracks = JSON.parse(mm[1]);
+      const tr = tracks.find((t: any) => t.languageCode?.startsWith(want)) || tracks.find((t: any) => t.languageCode?.startsWith('en')) || tracks[0];
+      const j: any = await (await fetch(tr.baseUrl + '&fmt=json3', { signal: AbortSignal.timeout(15000) })).json();
+      const text = (j.events || []).map((e: any) => (e.segs || []).map((s: any) => s.utf8).join('')).join(' ').replace(/\s+/g, ' ').trim();
+      if (text) return res.json({ text: text.slice(0, 40000), lang: tr.languageCode });
+    }
+  } catch { /* fall through to Gemini */ }
+  try {
+    const text = (await geminiYoutube(m[1], want)).slice(0, 40000);
+    return res.json({ text, lang: want, engine: 'Gemini' });
   } catch (e: any) {
-    return res.status(502).json({ error: 'YouTube blocks automatic import from our servers. Open the video, tap Show transcript, copy it and paste it here, or upload the audio file for transcription.' });
+    console.warn('youtube import failed:', e?.message);
+    return res.status(502).json({ error: FAIL });
   }
 });
 
